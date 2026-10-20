@@ -6,7 +6,7 @@
     "latest_pm": null,
     "row_id": "LHE-20261014T1300Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (153.8h old)",
+    "qc_flag": "STALE_FEED (154.1h old)",
     "forecast_table": [],
     "advisory_triggered": false,
     "notice": "Lahore ground truth monitor has been inactive since March 2025 (U.S. Consulate halt); live ground truth is unavailable and 24h forecast is suppressed per freshness policy."
@@ -54,7 +54,7 @@
     "latest_pm": null,
     "row_id": "KHI-20241025T1600Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (17406.8h old)",
+    "qc_flag": "STALE_FEED (17407.1h old)",
     "forecast_table": [],
     "advisory_triggered": false,
     "notice": "Karachi ground truth monitor has been inactive since March 2025 (U.S. Consulate halt); live ground truth is unavailable and 24h forecast is suppressed per freshness policy."
@@ -63,33 +63,33 @@
     "city": "Peshawar",
     "monitored": true,
     "stale": false,
-    "latest_pm": 39.906000000000006,
+    "latest_pm": 43.7,
     "row_id": "PEW-20261020T2200Z",
     "n_sensors": 1,
     "qc_flag": "SINGLE_SENSOR_WARNING",
     "forecast_table": [
       {
         "Horizon": "+6h",
-        "p50 Forecast (ug/m3)": 59.2,
-        "80% Conformal Band [p10, p90]": "[15.2 - 105.7]",
-        "Baseline A (Persistence)": 39.9,
-        "Baseline B (Seasonal-Hour)": 40.5,
+        "p50 Forecast (ug/m3)": 71.7,
+        "80% Conformal Band [p10, p90]": "[19.5 - 119.0]",
+        "Baseline A (Persistence)": 43.7,
+        "Baseline B (Seasonal-Hour)": 44.0,
         "CAMS Hindcast": 29.7
       },
       {
         "Horizon": "+12h",
-        "p50 Forecast (ug/m3)": 34.3,
-        "80% Conformal Band [p10, p90]": "[0.9 - 71.3]",
-        "Baseline A (Persistence)": 39.9,
-        "Baseline B (Seasonal-Hour)": 30.0,
+        "p50 Forecast (ug/m3)": 37.6,
+        "80% Conformal Band [p10, p90]": "[1.6 - 73.3]",
+        "Baseline A (Persistence)": 43.7,
+        "Baseline B (Seasonal-Hour)": 30.9,
         "CAMS Hindcast": 29.7
       },
       {
         "Horizon": "+24h",
-        "p50 Forecast (ug/m3)": 43.8,
-        "80% Conformal Band [p10, p90]": "[8.6 - 92.1]",
-        "Baseline A (Persistence)": 39.9,
-        "Baseline B (Seasonal-Hour)": 36.8,
+        "p50 Forecast (ug/m3)": 49.4,
+        "80% Conformal Band [p10, p90]": "[8.6 - 91.9]",
+        "Baseline A (Persistence)": 43.7,
+        "Baseline B (Seasonal-Hour)": 40.4,
         "CAMS Hindcast": 29.7
       }
     ],
