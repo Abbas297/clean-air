@@ -33,28 +33,27 @@ def detect_stuck_values(
 ) -> pd.Series:
     """
     Detects sensor readings where the identical non-null value persists for
-    at least window_hours (default 6h) consecutively.
+    at least window_hours (default 6h) consecutively using fast vectorization.
     """
     if pm25_col not in df.columns or sensor_col not in df.columns:
         return pd.Series(False, index=df.index)
 
-    df_sorted = df.sort_values(by=[sensor_col, "ts_utc"]).copy()
-    is_stuck = pd.Series(False, index=df.index)
+    df_sorted = df.sort_values(by=[sensor_col, "ts_utc"])
+    s = df_sorted[pm25_col]
+    sensors = df_sorted[sensor_col]
 
-    for sensor_id, group in df_sorted.groupby(sensor_col):
-        s = group[pm25_col]
-        # Ignore nulls
-        valid_mask = s.notna()
-        # Find consecutive identical blocks
-        shifted_diff = (s != s.shift(1)) | (~valid_mask)
-        block_id = shifted_diff.cumsum()
-        
-        # Count occurrences in each block
-        block_counts = block_id.map(block_id.value_counts())
-        stuck_in_group = valid_mask & (block_counts >= window_hours)
-        is_stuck.loc[group.index] = stuck_in_group
+    valid = s.notna()
+    # Identical to previous row of the same sensor
+    same_sensor = sensors == sensors.shift(1)
+    same_val = s == s.shift(1)
+    new_block = ~(same_sensor & same_val & valid)
+    block_id = new_block.cumsum()
 
-    return is_stuck
+    # Fast count per block using transform
+    block_sizes = df_sorted.groupby(block_id)[pm25_col].transform("count")
+    is_stuck_sorted = valid & (block_sizes >= window_hours)
+
+    return is_stuck_sorted.reindex(df.index, fill_value=False)
 
 def detect_extreme_values(
     df: pd.DataFrame,

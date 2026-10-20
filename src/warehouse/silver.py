@@ -34,40 +34,33 @@ def build_silver_layer(
     # -------------------------------------------------------------
     openaq_files = list(bronze_openaq_dir.glob("*.parquet"))
     if openaq_files:
-        df_openaq_raw = pd.concat([pd.read_parquet(f) for f in openaq_files], ignore_index=True)
-        
-        # If we have live metadata or historical hourly
-        # Build normalized sensor reading representation
-        if "datetime_last" in df_openaq_raw.columns:
-            # Map into standard sensor frame
-            readings = []
-            cities_cfg = config.get("cities", {})
-            for _, r in df_openaq_raw.iterrows():
-                loc_name = str(r.get("location_name", "")).lower()
-                matched_city = "lahore"
-                for c_k in cities_cfg.keys():
-                    if c_k in loc_name:
-                        matched_city = c_k
-                        break
-                
-                # Timestamp
-                t_val = r.get("datetime_last")
-                ts = pd.to_datetime(t_val if t_val else r.get("fetch_time_utc"), utc=True)
-                
-                readings.append({
-                    "sensor_id": str(r.get("sensor_id", "s_default")),
-                    "location_id": int(r.get("location_id", 0)),
-                    "city": matched_city,
-                    "city_code": cities_cfg.get(matched_city, {}).get("code", "PK"),
-                    "latitude": float(r.get("latitude")) if pd.notna(r.get("latitude")) else None,
-                    "longitude": float(r.get("longitude")) if pd.notna(r.get("longitude")) else None,
-                    "ts_utc": ts,
-                    "pm25_raw": float(r.get("pm25_raw", 68.0)), # base reading
-                    "licences": str(r.get("licences", "CC BY 4.0")),
-                })
-            df_sensors = pd.DataFrame(readings)
-        else:
-            df_sensors = df_openaq_raw
+        sensor_frames = []
+        cities_cfg = config.get("cities", {})
+        for f in openaq_files:
+            df_part = pd.read_parquet(f)
+            if "pm25_raw" in df_part.columns and "ts_utc" in df_part.columns:
+                sensor_frames.append(df_part[["sensor_id", "city", "city_code", "latitude", "longitude", "ts_utc", "pm25_raw", "licences"]])
+            elif "datetime_last" in df_part.columns:
+                for _, r in df_part.iterrows():
+                    loc_name = str(r.get("location_name", "")).lower()
+                    matched_city = "lahore"
+                    for c_k in cities_cfg.keys():
+                        if c_k in loc_name:
+                            matched_city = c_k
+                            break
+                    t_val = r.get("datetime_last")
+                    ts = pd.to_datetime(t_val if t_val else r.get("fetch_time_utc"), utc=True)
+                    sensor_frames.append(pd.DataFrame([{
+                        "sensor_id": str(r.get("sensor_id", "s_default")),
+                        "city": matched_city,
+                        "city_code": cities_cfg.get(matched_city, {}).get("code", "PK"),
+                        "latitude": float(r.get("latitude")) if pd.notna(r.get("latitude")) else None,
+                        "longitude": float(r.get("longitude")) if pd.notna(r.get("longitude")) else None,
+                        "ts_utc": ts,
+                        "pm25_raw": float(r.get("pm25_raw", 68.0)),
+                        "licences": str(r.get("licences", "CC BY 4.0")),
+                    }]))
+        df_sensors = pd.concat(sensor_frames, ignore_index=True) if sensor_frames else pd.DataFrame()
 
         # Run DQ Gate 1
         df_clean_sensors, _ = run_gate1_quality_agent(

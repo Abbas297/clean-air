@@ -90,34 +90,35 @@ def run_gate1_quality_agent(
     # 3. Adjudicate Severe Smog Peaks (500 to 1000 ug/m3) with Peer Corroboration
     adj_count = int(needs_adj_mask.sum())
     if adj_count > 0:
-        # Check if at least 2 other sensors in the city exceeded 300 ug/m3 in the same hour
+        high_peers_count = (
+            df_clean[df_clean[pm25_col] >= 300.0]
+            .groupby([city_col, ts_col])[pm25_col]
+            .count()
+            .to_dict()
+        )
+        total_peers_count = (
+            df_clean
+            .groupby([city_col, ts_col])[pm25_col]
+            .count()
+            .to_dict()
+        )
+
+        confirmed_count = 0
+        quarantined_extreme = 0
+
         for idx in df_clean[needs_adj_mask].index:
             row_city = df_clean.loc[idx, city_col]
             row_time = df_clean.loc[idx, ts_col]
             val = df_clean.loc[idx, pm25_col]
+            key = (row_city, row_time)
 
-            peer_readings = df_clean[
-                (df_clean[city_col] == row_city)
-                & (df_clean[ts_col] == row_time)
-                & (df_clean.index != idx)
-            ]
-            corroborating_peers = peer_readings[peer_readings[pm25_col] >= 300.0]
+            tot = total_peers_count.get(key, 1)
+            high_count = high_peers_count.get(key, 0)
+            peer_high = high_count - 1 if val >= 300.0 else high_count
 
-            if len(corroborating_peers) >= 1 or len(peer_readings) <= 1:
-                # Confirmed extreme smog event
+            if peer_high >= 1 or tot <= 1:
                 df_clean.loc[idx, "qc_flag"] = "EXTREME_CONFIRMED"
-                append_quality_log(
-                    run_id=run_id,
-                    gate="GATE_1",
-                    check="peer_adjudication",
-                    rule="R05_EXTREME_CONFIRMED",
-                    action=DQAction.CONFIRM.value,
-                    reason=f"Extreme PM2.5 value ({val} ug/m3) in {row_city} confirmed during severe smog event.",
-                    evidence={"city": row_city, "val": float(val), "time": str(row_time)},
-                    table="bronze_sensor_readings",
-                    rows_affected=1,
-                    log_path=quality_log_path,
-                )
+                confirmed_count += 1
             else:
                 df_clean.loc[idx, "qc_flag"] = "EXTREME_UNCONFIRMED_QUARANTINED"
                 q_row = df_clean.loc[[idx]].copy()
@@ -125,6 +126,34 @@ def run_gate1_quality_agent(
                 q_row["run_id"] = run_id
                 quarantined_rows.append(q_row)
                 df_clean.loc[idx, pm25_col] = np.nan
+                quarantined_extreme += 1
+
+        if confirmed_count > 0:
+            append_quality_log(
+                run_id=run_id,
+                gate="GATE_1",
+                check="peer_adjudication",
+                rule="R05_EXTREME_CONFIRMED",
+                action=DQAction.CONFIRM.value,
+                reason=f"Confirmed {confirmed_count} extreme readings (500-1000 ug/m3) corroborated by peers.",
+                evidence={"confirmed_count": confirmed_count},
+                table="bronze_sensor_readings",
+                rows_affected=confirmed_count,
+                log_path=quality_log_path,
+            )
+        if quarantined_extreme > 0:
+            append_quality_log(
+                run_id=run_id,
+                gate="GATE_1",
+                check="peer_adjudication",
+                rule="R04_EXTREME_ADJUDICATION",
+                action=DQAction.FLAG.value,
+                reason=f"Quarantined {quarantined_extreme} extreme readings lacking peer corroboration.",
+                evidence={"quarantined_count": quarantined_extreme},
+                table="bronze_sensor_readings",
+                rows_affected=quarantined_extreme,
+                log_path=quality_log_path,
+            )
 
     # 4. Stuck Sensor Detection (>= 6 hours identical non-null reading)
     stuck_mask = detect_stuck_values(df_clean, sensor_col=sensor_col, pm25_col=pm25_col, window_hours=6)

@@ -22,12 +22,12 @@ quality:
 	python -c "print('DQ gates executed.')"
 
 model:
-	@echo "==> Training LightGBM Quantile Models..."
-	python -c "print('Model training entrypoint.')"
+	@echo "==> Training LightGBM Quantile Models and Fitting CQR..."
+	python src/model/evaluate.py
 
 eval:
 	@echo "==> Evaluating against Baselines (Persistence & Seasonal-Hour)..."
-	python -c "print('Evaluation entrypoint.')"
+	python src/model/evaluate.py
 
 rag:
 	@echo "==> Testing Insight Agent & Grounded SQL Templates..."

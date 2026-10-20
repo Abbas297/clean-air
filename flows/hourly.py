@@ -9,11 +9,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.ingest.openaq import fetch_latest as fetch_openaq
+from src.ingest.openaq import fetch_latest as fetch_openaq, fetch_historical_community_sensors
 from src.ingest.openmeteo import fetch_latest as fetch_openmeteo
 from src.ingest.firms import fetch_latest_fires
 from src.ingest.airnow_archive import fetch_historical_archive
 from src.warehouse.silver import build_silver_layer
+from src.warehouse.calibrate import fit_and_apply_calibration
+from src.warehouse.gold import build_gold_warehouse
 
 def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
     p = Path(config_path)
@@ -47,6 +49,11 @@ def run_hourly_pipeline() -> Dict[str, Any]:
     print(f"[{start_time.isoformat()}] Starting Saaf Hawa hourly pipeline (Run ID: {run_id})...")
 
     # 1. Bronze Ingestions
+    bronze_openaq_dir = Path(config.get("paths", {}).get("bronze_openaq", "data/bronze/openaq"))
+    if not (bronze_openaq_dir / "bronze_openaq_historical_2023_2026.parquet").exists():
+        hist_openaq = fetch_historical_community_sensors(config)
+        print(f"-> OpenAQ Community Historical Bronze landed: {hist_openaq}")
+
     openaq_path = fetch_openaq(config)
     print(f"-> OpenAQ Bronze landed: {openaq_path}")
 
@@ -67,7 +74,15 @@ def run_hourly_pipeline() -> Dict[str, Any]:
     silver_paths = build_silver_layer(config, run_id=run_id)
     print(f"-> Silver layer built: {list(silver_paths.keys())}")
 
-    # 3. Check Manifest and Quality Log
+    # 3. Calibration on Train Split
+    cal_path, cal_meta = fit_and_apply_calibration(config)
+    print(f"-> Sensor calibration applied: {cal_path}")
+
+    # 4. DQ Gate 2 & Gold DuckDB Warehouse
+    gold_db_path, gold_counts = build_gold_warehouse(config, run_id=run_id)
+    print(f"-> Gold warehouse built: {gold_counts}")
+
+    # 5. Check Manifest and Quality Log
     manifest_path = Path(config.get("paths", {}).get("manifest", "data/manifest.csv"))
     manifest_rows = 0
     if manifest_path.exists():
@@ -92,7 +107,8 @@ def run_hourly_pipeline() -> Dict[str, Any]:
         "manifest_rows_total": manifest_rows,
         "quality_events_logged": quality_events,
         "silver_files": {k: str(v) for k, v in silver_paths.items()},
-        "pipeline_version": "v2.0-silver-ready",
+        "gold_tables": gold_counts,
+        "pipeline_version": "v2.0-gold-ready",
     }
 
     status_file = Path(config.get("paths", {}).get("status_json", "status.json"))
