@@ -11,13 +11,13 @@ Independent publishers: OpenAQ community sensors, U.S. AirNow embassy archive (n
 | Horizon | A: Persistence MAE | B: Seasonal-hour MAE | LightGBM+CQR MAE | 80% coverage | Beats A and B |
 |---|---|---|---|---|---|
 | +6h | 30.35 | 25.08 | 22.10 | 81.9% | yes |
-| +12h | 33.85 | 25.07 | 22.82 | 82.5% | yes |
-| +24h | 24.88 | 25.08 | 23.18 | 83.3% | yes |
+| +12h | 33.85 | 25.07 | 22.79 | 82.6% | yes |
+| +24h | 24.88 | 25.08 | 23.15 | 83.3% | yes |
 
 *MAE in µg/m³ on identical test rows. Declared target for the 80% interval: 75-85% (observed 81.9-83.3%). Seasonal-hour is the same at every horizon because it uses the previous 7 days of the target hour. Numbers are read from state/eval_summary.csv.*
 
 ## 4. Limitations (read these first)
-• Fire signal: the FIRMS series in Silver covers 1321 days (Jan 2023 - Oct 2026), backfilling multi-year transboundary fire counts and FRP lags.
+• Fire signal: the FIRMS series in Silver covers 1347 days (Jan 2023 - Oct 2026), backfilling multi-year transboundary fire counts and FRP lags.
 • Uncalibrated labels (no reference-monitor overlap in the training window): karachi, peshawar.
 • Labels in the test period come from different sensors than in training (sensor change in May 2025), so test error includes a label-source shift.
 • Weakest group: Smog (Oct-Feb) at +24h (MAE 37.87, 80% coverage 79.4%).

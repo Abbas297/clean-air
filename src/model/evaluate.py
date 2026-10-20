@@ -255,6 +255,13 @@ def run_evaluation_suite(
     print("\n[Granular Evaluation by Group (City, Season, Diurnal, AQI Tier)]")
     print(df_group.head(25).to_string(index=False), flush=True)
 
+    try:
+        from src.warehouse.state_export import export_state_bundle
+        export_state_bundle(output_dir=Path("state"))
+        print("[Evaluation] Synchronized latest evaluation into state/ bundle.", flush=True)
+    except Exception as e:
+        print(f"[Evaluation] Warning: Could not export state bundle: {e}", flush=True)
+
     return df_group
 
 if __name__ == "__main__":

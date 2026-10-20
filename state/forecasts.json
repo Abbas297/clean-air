@@ -6,7 +6,7 @@
     "latest_pm": null,
     "row_id": "LHE-20261014T1300Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (154.6h old)",
+    "qc_flag": "STALE_FEED (154.8h old)",
     "forecast_table": [],
     "advisory_triggered": false,
     "notice": "Lahore ground truth monitor has been inactive since March 2025 (U.S. Consulate halt); live ground truth is unavailable and 24h forecast is suppressed per freshness policy."
@@ -54,7 +54,7 @@
     "latest_pm": null,
     "row_id": "KHI-20241025T1600Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (17407.6h old)",
+    "qc_flag": "STALE_FEED (17407.8h old)",
     "forecast_table": [],
     "advisory_triggered": false,
     "notice": "Karachi ground truth monitor has been inactive since March 2025 (U.S. Consulate halt); live ground truth is unavailable and 24h forecast is suppressed per freshness policy."

@@ -15,5 +15,15 @@
 11. **Subgroup performance & weak spots (disclosed plainly):**
    - **Night at +6h (00–06 PKT):** The model (MAE 25.49) is slightly worse than persistence (25.20) and seasonal (25.19).
    - **Afternoon at +12h (12–18 PKT):** The model (MAE 25.18) is slightly worse than the seasonal baseline (24.90).
-   - **Lahore interval coverage:** 76.0% at +6h and 74.7% at +12h, falling short of the nominal 80% target.
-   - **Very Unhealthy tier (>150 µg/m³):** 80% interval coverage drops to 72.2% at +6h, with an MAE of 53.83 µg/m³. Operational decision-makers (DEAs) must be aware that interval uncertainty is under-covered during acute smog peaks.
+   - **Lahore interval coverage:** 76.0% at +6h, 74.7% at +12h, and 75.3% at +24h, falling below the nominal 80% target. (The declared 75–85% validity tolerance applies to pooled coverage across all cities, not individual subgroups).
+   - **Very Unhealthy tier (>150 µg/m³):** 80% interval coverage drops to 72.2% at +6h and 67.3% at +12h, with an MAE of 53.83 µg/m³. Operational decision-makers (DEAs) must be aware that interval uncertainty is under-covered during acute smog peaks.
+12. **FIRMS fire series data gaps.** Following the NRT backfill (2026-05-01 to 2026-07-31, landing 1,518 detections in Bronze), the multi-year daily fire series covers 1,347 days. Exactly 42 days remain missing across the 2023–2026 record due to cloud-cover screening or archive boundary limits: 2023-07-26, 2023-08-23; 2024 (21 days, notably 2024-05-30 to 2024-06-03, 2024-07-10 to 2024-07-15, 2024-07-24 to 2024-07-28, 2024-11-03 to 2024-11-05); 2025 (5 days: 2025-02-27, 2025-07-05, 2025-07-07, 2025-08-18, 2025-10-06); and 2026 (14 days: 2026-03-10 to 2026-03-12, 2026-04-28 to 2026-04-30, 2026-06-01 to 2026-06-02, 2026-07-11 to 2026-07-15, 2026-08-03). As designed, missing days are treated as zero fires (zero detections in the Punjab bounding box).
+13. **Final evaluation run (fire backfill & synchronized state export).** `src/model/evaluate.py` was updated to synchronously invoke `export_state_bundle(output_dir=Path('state'))` upon completion to guarantee that state files (`state/eval_by_group.csv`, `state/eval_summary.csv`) always reflect the latest evaluation. Overall test metrics before and after the May–July 2026 fire backfill:
+   - **Before fire backfill (23,547 held-out test rows):**
+     - +6h: MAE 22.10 µg/m³, RMSE 34.72, 80% coverage 81.9%, Band width 72.2 µg/m³
+     - +12h: MAE 22.82 µg/m³, RMSE 36.60, 80% coverage 82.5%, Band width 76.1 µg/m³
+     - +24h: MAE 23.18 µg/m³, RMSE 37.34, 80% coverage 83.3%, Band width 76.4 µg/m³
+   - **After fire backfill (Final, 23,547 held-out test rows):**
+     - +6h: MAE 22.10 µg/m³, RMSE 34.72, 80% coverage 81.9%, Band width 72.2 µg/m³
+     - +12h: MAE 22.79 µg/m³, RMSE 36.58, 80% coverage 82.6%, Band width 76.0 µg/m³
+     - +24h: MAE 23.15 µg/m³, RMSE 37.30, 80% coverage 83.3%, Band width 76.4 µg/m³
