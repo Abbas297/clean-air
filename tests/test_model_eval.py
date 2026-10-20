@@ -41,11 +41,17 @@ def test_evaluation_success_criteria():
     assert eval_file.exists(), "eval_by_group.parquet not found"
 
     df_eval = pd.read_parquet(eval_file)
-    model_rows = df_eval[df_eval["model"] == "LightGBM Quantiles + CQR"]
+    overall_rows = df_eval[df_eval["group_type"] == "overall"]
 
-    assert len(model_rows) == 3, "Expected 3 horizon evaluation rows for model"
-    assert (model_rows["beats_baselines"] == True).all(), "Model did not beat baselines across all horizons"
+    assert len(overall_rows) == 3, "Expected 3 horizon evaluation rows for overall model"
+    assert (overall_rows["beats_baselines"] == True).all(), "Model did not beat baselines across all horizons"
 
     # Coverage must be in 75% - 85% range
-    for cov in model_rows["coverage_80"]:
+    for cov in overall_rows["coverage_80"]:
         assert 75.0 <= cov <= 85.0, f"80% conformal coverage out of bounds: {cov}%"
+
+    # Assert granular group breakdowns exist as required by rubric
+    assert "city" in df_eval["group_type"].values, "Missing city group evaluation"
+    assert "season" in df_eval["group_type"].values, "Missing season group evaluation"
+    assert "diurnal" in df_eval["group_type"].values, "Missing diurnal group evaluation"
+    assert "aqi_tier" in df_eval["group_type"].values, "Missing AQI tier group evaluation"

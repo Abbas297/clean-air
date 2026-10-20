@@ -41,7 +41,7 @@ def execute_intent_query(
                 
                 # Fetch evaluation metric for this horizon to produce uncertainty band
                 eval_res = con.execute("""
-                    SELECT p50_mae, mean_band_width
+                    SELECT model_mae AS p50_mae, mean_band_width
                     FROM eval_by_group
                     WHERE model LIKE '%LightGBM%' AND horizon = ?
                     LIMIT 1

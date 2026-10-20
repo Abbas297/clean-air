@@ -9,7 +9,7 @@ venv/
 .venv/
 ENV/
 
-# Data and artifacts (except manifest)
+# Data and artifacts (except manifest and committed state)
 data/bronze/*
 !data/bronze/.gitkeep
 data/silver/*
@@ -20,6 +20,7 @@ data/quarantine/*
 !data/quarantine/.gitkeep
 *.parquet
 *.duckdb
+!state/*
 
 # Secrets
 .env

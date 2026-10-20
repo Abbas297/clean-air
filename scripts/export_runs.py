@@ -35,33 +35,46 @@ async def _fetch_prefect_runs() -> List[Dict[str, Any]]:
 def export_prefect_runs(output_path: Path = PREFECT_RUNS_CSV) -> Path:
     """
     Exports unedited flow run history directly from the Prefect engine
-    and writes unedited prefect_runs.csv.
+    and appends new runs to prefect_runs.csv without duplicates.
+    Zero synthetic fallbacks.
     """
     runs = asyncio.run(_fetch_prefect_runs())
 
-    # Fallback to status.json only if Prefect database has no recorded runs
-    if not runs:
-        status_file = Path("status.json")
-        now_utc = datetime.now(timezone.utc).isoformat()
-        if status_file.exists():
-            with open(status_file, "r", encoding="utf-8") as f:
-                s = json.load(f)
-            runs.append({
-                "flow_run_id": s.get("run_id", "run_local_01"),
-                "name": "saaf-hawa-hourly-heartbeat",
-                "state": "COMPLETED" if s.get("run_status") == "HEALTHY" else "FAILED",
-                "start_time": s.get("last_heartbeat_utc", now_utc),
-                "end_time": s.get("last_heartbeat_utc", now_utc),
-                "total_run_time": s.get("duration_seconds", 36.9),
-            })
+    # Read existing runs if file exists to prevent losing previous run records
+    existing_runs_by_id: Dict[str, Dict[str, Any]] = {}
+    if output_path.exists():
+        with open(output_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                run_id = row.get("flow_run_id")
+                if run_id:
+                    existing_runs_by_id[run_id] = row
+
+    # Add fetched genuine Prefect runs
+    for r in runs:
+        run_id = r.get("flow_run_id")
+        if run_id:
+            existing_runs_by_id[run_id] = r
+
+    # Sort by start_time descending
+    all_runs = list(existing_runs_by_id.values())
+    all_runs.sort(key=lambda x: str(x.get("start_time", "")), reverse=True)
 
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         fieldnames = ["flow_run_id", "name", "state", "start_time", "end_time", "total_run_time"]
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(runs)
+        writer.writerows(all_runs)
 
-    print(f"Exported {len(runs)} genuine flow runs unedited to {output_path}")
+    # Mirror to state/ for dashboard tracking
+    state_runs_path = Path("state/prefect_runs.csv")
+    state_runs_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(state_runs_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(all_runs)
+
+    print(f"Exported {len(all_runs)} genuine flow runs (appended without duplicates) to {output_path}")
     return output_path
 
 if __name__ == "__main__":

@@ -17,17 +17,18 @@ When the U.S. State Department / EPA air monitoring network went dark in March 2
 
 | Role | Original Publisher | Endpoint / URL | Update Rate | Licence | Credibility & Independence |
 |---|---|---|---|---|---|
-| **Live Target Ground Truth** | Pakistan Air Quality Initiative (PAQI) via OpenAQ | `api.openaq.org/v3` | Hourly | CC BY 4.0 / Open Data | Independent community sensor network verified in peer-reviewed atmospheric studies (EGU24-453). |
-| **Historical Calibration Reference** | U.S. Department of State / EPA AirNow | `airnow-dos-geos.s3.amazonaws.com` | One-time archive (pre-Mar 2025) | U.S. Public Domain | Reference-grade beta-attenuation mass monitors operated at U.S. diplomatic posts. *(Source NOT on official track list).* |
-| **Atmospheric Feed & Weather** | Copernicus ECMWF & DWD via Open-Meteo | `air-quality-api.open-meteo.com` | Hourly | CC BY 4.0 (Non-commercial) | European Union flagship Copernicus Atmosphere Monitoring Service (CAMS) 11km chemical transport model. |
+| **Live Target Ground Truth** | Pakistan Air Quality Initiative (PAQI) via OpenAQ | `api.openaq.org/v3/locations` | Hourly | CC BY 4.0 / Open Data | Independent community sensor network verified in peer-reviewed atmospheric studies (EGU24-453). |
+| **Historical Calibration Reference** | U.S. Department of State / EPA AirNow via OpenAQ | `api.openaq.org/v3/sensors/{id}/hours` | One-time archive (pre-Mar 2025) | U.S. Public Domain | Reference-grade beta-attenuation mass monitors operated at U.S. diplomatic posts in Pakistan (Lahore 25135, Islamabad 25066, Karachi 23747, Peshawar 23455). *(Source NOT on official track list).* |
+| **Atmospheric Feed & Weather** | Copernicus ECMWF & DWD via Open-Meteo | `archive-api.open-meteo.com` | Hourly | CC BY 4.0 (Non-commercial) | European Union flagship Copernicus Atmosphere Monitoring Service (CAMS) 11km chemical transport model and ERA5 reanalysis. |
 | **Transboundary Fire Signal** | NASA Earthdata / LANCE FIRMS | `firms.modaps.eosdis.nasa.gov` | Daily | NASA Public Domain | Active fire detection and Fire Radiative Power (FRP) from VIIRS and MODIS polar-orbiting satellites. |
 | **Official Guidance & Standards** | WHO & Punjab EPD | `who.int`, `epd.punjab.gov.pk` | Static | CC BY-NC-SA 3.0 / Official Government | Official regulatory ambient air thresholds and health intervention guidelines. |
 
 ---
 
 ## 3. Data Volume & Contract
-- **Volume:** Over 131,000 hourly ground-truth city rows (Jan 2023 – Sep 2026), 75,748 historical embassy calibration rows, and 140,000+ atmospheric weather rows. Exceeds the 50,000 hourly row threshold.
-- **Contract:** Timestamps strictly UTC (`ts_utc`). Missing values remain `NULL` (never synthetic). Deterministic row IDs: `{CITYCODE}-{YYYYMMDDTHHZ}`. Full provenance tracked with SHA-256 in `manifest.csv`.
+- **Volume:** Over 56,388 hourly ground-truth city rows (Jan 2023 – Oct 2026), 28,652 historical embassy calibration rows, and 133,440 atmospheric weather rows. Exceeds the 50,000 hourly row threshold.
+- **Contract:** Timestamps strictly UTC (`ts_utc`). Missing values remain `NULL` (never synthetic). Deterministic row IDs: `{CITYCODE}-{YYYYMMDDTHHZ}`. Full provenance tracked with SHA-256 in `data/manifest.csv`.
+- **Primary Operational Limitation:** Following the March 2025 halt of U.S. Embassy monitors, post-halt ground-truth labels are reconstructed estimates derived from calibrated community sensor networks rather than direct reference BAM instruments.
 
 ---
 

@@ -114,10 +114,22 @@ def saaf_hawa_hourly_flow() -> Dict[str, Any]:
     end_time = datetime.now(timezone.utc)
     duration_sec = (end_time - start_time).total_seconds()
 
+    # Derive run_status from gate results, gold tables, and source freshness
+    ingest_ok = bool(openaq_path and openmeteo_path)
+    gate1_ok = bool(silver_files and len(silver_files) >= 3)
+    gate2_ok = bool(gold_counts and gold_counts.get("pm25_city_hourly", 0) > 0 and gold_counts.get("features_hourly", 0) > 0)
+
+    if ingest_ok and gate1_ok and gate2_ok:
+        derived_status = "HEALTHY"
+    elif gate2_ok:
+        derived_status = "DEGRADED"
+    else:
+        derived_status = "FAILED"
+
     status_data = {
         "last_heartbeat_utc": end_time.isoformat(),
         "run_id": run_id,
-        "run_status": "HEALTHY",
+        "run_status": derived_status,
         "duration_seconds": round(duration_sec, 2),
         "manifest_rows_total": manifest_rows,
         "quality_events_logged": quality_events,
@@ -130,7 +142,18 @@ def saaf_hawa_hourly_flow() -> Dict[str, Any]:
     with open(status_file, "w", encoding="utf-8") as f:
         json.dump(status_data, f, indent=2)
 
-    print(f"[{end_time.isoformat()}] Prefect Pipeline successful. Status written to {status_file}", flush=True)
+    # 6. Export lightweight state bundle for dashboard (committed state/)
+    try:
+        from src.warehouse.state_export import export_state_bundle
+        state_dir = Path("state")
+        state_dir.mkdir(parents=True, exist_ok=True)
+        with open(state_dir / "status.json", "w", encoding="utf-8") as f:
+            json.dump(status_data, f, indent=2)
+        export_state_bundle(output_dir=state_dir)
+    except Exception as e:
+        print(f"[State Export Warning] {e}", flush=True)
+
+    print(f"[{end_time.isoformat()}] Prefect Pipeline finished with status: {derived_status}. Status written to {status_file}", flush=True)
     return status_data
 
 if __name__ == "__main__":

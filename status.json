@@ -1,10 +1,10 @@
 {
-  "last_heartbeat_utc": "2026-10-20T21:37:57.238078+00:00",
-  "run_id": "run_20261020T2137Z",
+  "last_heartbeat_utc": "2026-10-20T22:04:11.270496+00:00",
+  "run_id": "run_20261020T2203Z",
   "run_status": "HEALTHY",
-  "duration_seconds": 36.87,
-  "manifest_rows_total": 11,
-  "quality_events_logged": 16,
+  "duration_seconds": 35.77,
+  "manifest_rows_total": 22,
+  "quality_events_logged": 19,
   "silver_files": {
     "sensors": "data\\silver\\silver_sensor_readings.parquet",
     "meteo": "data\\silver\\silver_cams_weather.parquet",

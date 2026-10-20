@@ -24,19 +24,27 @@ In March 2025, public ambient air quality monitoring in Pakistan suffered a cata
 
 ### 3. Model Benchmark & Evaluation Against Declared Baselines
 
-All evaluations were conducted strictly on held-out test splits (`ts >= 2025-07-02`) with a mandatory **24-hour embargo** between train, validation, and test sets:
+All evaluations were conducted strictly on held-out test splits (`ts >= 2025-07-02`) with a mandatory **24-hour embargo** between train, validation, and test sets. All models and baselines were evaluated on strictly identical, like-for-like joined test rows ($N \approx 24,350$ per horizon):
 
 | Horizon | Baseline A (Persistence) MAE | Baseline B (Seasonal-Hour) MAE | Saaf Hawa LightGBM + CQR MAE | Conformal 80% Coverage | Baselines Beaten? |
 |---|---|---|---|---|---|
-| **+6 Hours** | 28.48 µg/m³ | 23.60 µg/m³ | **20.82 µg/m³** | 83.0% | **YES** |
-| **+12 Hours** | 31.74 µg/m³ | 23.60 µg/m³ | **21.30 µg/m³** | 84.5% | **YES** |
-| **+24 Hours** | 23.45 µg/m³ | 23.60 µg/m³ | **21.64 µg/m³** | 84.8% | **YES** |
+| **+6 Hours** | 28.48 µg/m³ | 23.62 µg/m³ | **20.52 µg/m³** | **82.8%** | **YES** |
+| **+12 Hours** | 31.77 µg/m³ | 23.63 µg/m³ | **21.03 µg/m³** | **84.6%** | **YES** |
+| **+24 Hours** | 23.50 µg/m³ | 23.65 µg/m³ | **21.49 µg/m³** | **84.9%** | **YES** |
+
+> **Baseline Invariance Note:** Baseline B (Seasonal-Hour) yields an MAE of ~23.6 µg/m³ across all three horizons. Because $h \le 24\text{ h}$, the previous 7 daily historical occurrences for the target hour $(t+h)$ are identical regardless of horizon, producing an invariant empirical baseline.
 
 ---
 
-### 4. Grounded Insight Agent & Responsible AI Safeguards
+### 4. Primary Operational Limitations & Scientific Honesty
+1. **Calibrated Estimate Post-March 2025:** Following the shutdown of reference BAM monitors at U.S. diplomatic posts, ground-truth labels in the test period are reconstructed via humidity-aware Ridge calibration of community sensors (PAQI) rather than direct BAM instruments. Post-March 2025 ground truth is an operational estimate.
+2. **Unmonitored Districts:** In districts without physical monitors (e.g., Multan, Faisalabad), automated health advisories are strictly suspended per Hackathon Guidelines. Regional CAMS bounds are provided with explicit unmonitored warnings.
+
+---
+
+### 5. Grounded Insight Agent & Responsible AI Safeguards
 - **Zero Hallucinated Numbers:** Output Number Guard ensures every digit in the agent's response maps to retrieved SQL rows or official health guideline citations.
 - **Traceable Row IDs:** Every forecast answer explicitly cites its database row ID (e.g., `LHE-20261020T1600Z`).
 - **Emergency Health Pointers:** Medical emergency instructions directing severe cases to Punjab Emergency Service (**Rescue 1122**) and National Health Helpline (**1033**) are appended to health responses.
-- **Unvalidated City Safeguards:** Unmonitored cities (Multan, Faisalabad) are explicitly labeled with widened uncertainty bounds.
+- **Unvalidated City Safeguards:** Unmonitored cities (Multan, Faisalabad) are explicitly labeled with widened uncertainty bounds and suspended advisories.
 - **Bilingual Accessibility:** Native Urdu advisory templates for provincial education authorities.

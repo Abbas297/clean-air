@@ -1,0 +1,10 @@
+model,horizon,p50_mae,p50_rmse,coverage_80,mean_band_width,beats_baselines
+Baseline A (Persistence),+6h,28.48,47.74,0.0,0.0,False
+Baseline B (Seasonal-Hour),+6h,23.62,38.29,0.0,0.0,False
+LightGBM Quantiles + CQR,+6h,20.52,32.59,82.8,69.6,True
+Baseline A (Persistence),+12h,31.77,53.27,0.0,0.0,False
+Baseline B (Seasonal-Hour),+12h,23.63,38.3,0.0,0.0,False
+LightGBM Quantiles + CQR,+12h,21.03,34.19,84.6,73.5,True
+Baseline A (Persistence),+24h,23.5,39.05,0.0,0.0,False
+Baseline B (Seasonal-Hour),+24h,23.65,38.33,0.0,0.0,False
+LightGBM Quantiles + CQR,+24h,21.49,35.1,84.9,75.8,True

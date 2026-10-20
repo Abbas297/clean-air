@@ -8,6 +8,26 @@ import pandas as pd
 QUANTILES = [0.10, 0.25, 0.50, 0.75, 0.90]
 HORIZONS = [6, 12, 24]
 
+BASE_FEATURE_COLS = [
+    "pm25_cal", "pm25_lag_1", "pm25_lag_3", "pm25_lag_6", "pm25_lag_12", "pm25_lag_24", "pm25_lag_48",
+    "pm25_roll_mean_6h", "pm25_roll_mean_24h", "pm25_roll_std_24h",
+    "hour", "dayofweek", "month", "city_cat",
+]
+
+EXTERNAL_FEATURE_COLS = [
+    "cams_pm25", "cams_pm10", "aod", "temp", "rh", "wind_u", "wind_v", "precip",
+    "fire_count_lag1", "fire_count_lag2", "fire_count_lag3",
+    "fire_frp_lag1", "fire_frp_lag2", "fire_frp_lag3",
+]
+
+def get_feature_columns(df: pd.DataFrame) -> List[str]:
+    """Returns the unified list of feature column names available in df."""
+    cols = list(BASE_FEATURE_COLS)
+    for ext in EXTERNAL_FEATURE_COLS:
+        if ext in df.columns:
+            cols.append(ext)
+    return cols
+
 def build_feature_matrix(
     df_pm25: pd.DataFrame,
     df_features: pd.DataFrame,
@@ -76,17 +96,7 @@ def train_quantile_models(
     models_dir.mkdir(parents=True, exist_ok=True)
     trained_models = {}
 
-    feature_cols = [
-        "pm25_cal", "pm25_lag_1", "pm25_lag_3", "pm25_lag_6", "pm25_lag_12", "pm25_lag_24", "pm25_lag_48",
-        "pm25_roll_mean_6h", "pm25_roll_mean_24h", "pm25_roll_std_24h",
-        "hour", "dayofweek", "month", "city_cat",
-    ]
-    # Add external features if populated
-    for ext in ["cams_pm25", "cams_pm10", "aod", "temp", "rh", "wind_u", "wind_v", "precip",
-                "fire_count_lag1", "fire_count_lag2", "fire_count_lag3",
-                "fire_frp_lag1", "fire_frp_lag2", "fire_frp_lag3"]:
-        if ext in df_matrix.columns:
-            feature_cols.append(ext)
+    feature_cols = get_feature_columns(df_matrix)
 
     train_mask = df_matrix["ts_utc"] <= pd.to_datetime(train_end, utc=True)
     df_train = df_matrix[train_mask]
@@ -216,7 +226,7 @@ def generate_forecast_for_city(
         # Baseline B: Seasonal Hour (mean of same target hour in last 7 days)
         target_hour = (df_pm25["ts_utc"].max().hour + h) % 24
         same_hour_readings = df_pm25[df_pm25["ts_utc"].dt.hour == target_hour]["pm25_cal"].dropna()
-        p_seasonal = round(float(same_hour_readings.mean()), 1) if len(same_hour_readings) > 0 else round(curr_pm * 0.95, 1)
+        p_seasonal = round(float(same_hour_readings.mean()), 1) if len(same_hour_readings) > 0 else p_persist
 
         # CAMS value if available
         cams_val = float(df_features["cams_pm25"].dropna().iloc[0]) if "cams_pm25" in df_features.columns and not df_features["cams_pm25"].dropna().empty else p50

@@ -1,0 +1,214 @@
+{
+  "lahore": {
+    "city": "Lahore",
+    "monitored": true,
+    "latest_pm": 93.4149143004782,
+    "row_id": "LHE-20261020T2100Z",
+    "n_sensors": 56,
+    "qc_flag": "VALID",
+    "forecast_table": [
+      {
+        "Horizon": "+6h",
+        "p50 Forecast (ug/m3)": 129.6,
+        "80% Conformal Band [p10, p90]": "[52.0 - 156.0]",
+        "Baseline A (Persistence)": 93.4,
+        "Baseline B (Seasonal-Hour)": 76.9,
+        "CAMS Hindcast": 139.2
+      },
+      {
+        "Horizon": "+12h",
+        "p50 Forecast (ug/m3)": 89.1,
+        "80% Conformal Band [p10, p90]": "[31.7 - 142.5]",
+        "Baseline A (Persistence)": 93.4,
+        "Baseline B (Seasonal-Hour)": 35.2,
+        "CAMS Hindcast": 139.2
+      },
+      {
+        "Horizon": "+24h",
+        "p50 Forecast (ug/m3)": 68.9,
+        "80% Conformal Band [p10, p90]": "[66.6 - 156.1]",
+        "Baseline A (Persistence)": 93.4,
+        "Baseline B (Seasonal-Hour)": 68.8,
+        "CAMS Hindcast": 139.2
+      }
+    ],
+    "advisory_triggered": true
+  },
+  "islamabad": {
+    "city": "Islamabad",
+    "monitored": true,
+    "latest_pm": 63.99349869393581,
+    "row_id": "ISB-20261020T2100Z",
+    "n_sensors": 4,
+    "qc_flag": "VALID",
+    "forecast_table": [
+      {
+        "Horizon": "+6h",
+        "p50 Forecast (ug/m3)": 40.9,
+        "80% Conformal Band [p10, p90]": "[11.9 - 73.5]",
+        "Baseline A (Persistence)": 64.0,
+        "Baseline B (Seasonal-Hour)": 32.1,
+        "CAMS Hindcast": 20.1
+      },
+      {
+        "Horizon": "+12h",
+        "p50 Forecast (ug/m3)": 38.0,
+        "80% Conformal Band [p10, p90]": "[4.7 - 73.3]",
+        "Baseline A (Persistence)": 64.0,
+        "Baseline B (Seasonal-Hour)": 32.8,
+        "CAMS Hindcast": 20.1
+      },
+      {
+        "Horizon": "+24h",
+        "p50 Forecast (ug/m3)": 47.0,
+        "80% Conformal Band [p10, p90]": "[3.5 - 97.1]",
+        "Baseline A (Persistence)": 64.0,
+        "Baseline B (Seasonal-Hour)": 40.0,
+        "CAMS Hindcast": 20.1
+      }
+    ],
+    "advisory_triggered": true
+  },
+  "karachi": {
+    "city": "Karachi",
+    "monitored": true,
+    "latest_pm": 63.790000000000006,
+    "row_id": "KHI-20250304T1200Z",
+    "n_sensors": 1,
+    "qc_flag": "SINGLE_SENSOR_WARNING",
+    "forecast_table": [
+      {
+        "Horizon": "+6h",
+        "p50 Forecast (ug/m3)": 39.3,
+        "80% Conformal Band [p10, p90]": "[7.6 - 91.9]",
+        "Baseline A (Persistence)": 63.8,
+        "Baseline B (Seasonal-Hour)": 26.0,
+        "CAMS Hindcast": 26.7
+      },
+      {
+        "Horizon": "+12h",
+        "p50 Forecast (ug/m3)": 39.0,
+        "80% Conformal Band [p10, p90]": "[0.9 - 92.2]",
+        "Baseline A (Persistence)": 63.8,
+        "Baseline B (Seasonal-Hour)": 21.9,
+        "CAMS Hindcast": 26.7
+      },
+      {
+        "Horizon": "+24h",
+        "p50 Forecast (ug/m3)": 37.9,
+        "80% Conformal Band [p10, p90]": "[14.1 - 95.3]",
+        "Baseline A (Persistence)": 63.8,
+        "Baseline B (Seasonal-Hour)": 34.7,
+        "CAMS Hindcast": 26.7
+      }
+    ],
+    "advisory_triggered": true
+  },
+  "peshawar": {
+    "city": "Peshawar",
+    "monitored": true,
+    "latest_pm": 44.218,
+    "row_id": "PEW-20261020T2100Z",
+    "n_sensors": 1,
+    "qc_flag": "SINGLE_SENSOR_WARNING",
+    "forecast_table": [
+      {
+        "Horizon": "+6h",
+        "p50 Forecast (ug/m3)": 63.9,
+        "80% Conformal Band [p10, p90]": "[17.7 - 111.2]",
+        "Baseline A (Persistence)": 44.2,
+        "Baseline B (Seasonal-Hour)": 37.9,
+        "CAMS Hindcast": 29.7
+      },
+      {
+        "Horizon": "+12h",
+        "p50 Forecast (ug/m3)": 48.6,
+        "80% Conformal Band [p10, p90]": "[6.6 - 84.4]",
+        "Baseline A (Persistence)": 44.2,
+        "Baseline B (Seasonal-Hour)": 37.4,
+        "CAMS Hindcast": 29.7
+      },
+      {
+        "Horizon": "+24h",
+        "p50 Forecast (ug/m3)": 47.9,
+        "80% Conformal Band [p10, p90]": "[8.7 - 90.4]",
+        "Baseline A (Persistence)": 44.2,
+        "Baseline B (Seasonal-Hour)": 40.9,
+        "CAMS Hindcast": 29.7
+      }
+    ],
+    "advisory_triggered": false
+  },
+  "faisalabad": {
+    "city": "Faisalabad",
+    "monitored": false,
+    "latest_pm": null,
+    "row_id": null,
+    "n_sensors": 0,
+    "qc_flag": "UNVALIDATED",
+    "forecast_table": [
+      {
+        "Horizon": "+6h",
+        "p50 Forecast (ug/m3)": null,
+        "80% Conformal Band [p10, p90]": "[Suspended]",
+        "Baseline A (Persistence)": null,
+        "Baseline B (Seasonal-Hour)": null,
+        "CAMS Hindcast": 72.2
+      },
+      {
+        "Horizon": "+12h",
+        "p50 Forecast (ug/m3)": null,
+        "80% Conformal Band [p10, p90]": "[Suspended]",
+        "Baseline A (Persistence)": null,
+        "Baseline B (Seasonal-Hour)": null,
+        "CAMS Hindcast": 79.4
+      },
+      {
+        "Horizon": "+24h",
+        "p50 Forecast (ug/m3)": null,
+        "80% Conformal Band [p10, p90]": "[Suspended]",
+        "Baseline A (Persistence)": null,
+        "Baseline B (Seasonal-Hour)": null,
+        "CAMS Hindcast": 93.8
+      }
+    ],
+    "advisory_triggered": false,
+    "notice": "Faisalabad is an unmonitored district with no active continuous ground-truth sensors. Official health advisories are suspended pending physical sensor installation."
+  },
+  "multan": {
+    "city": "Multan",
+    "monitored": false,
+    "latest_pm": null,
+    "row_id": null,
+    "n_sensors": 0,
+    "qc_flag": "UNVALIDATED",
+    "forecast_table": [
+      {
+        "Horizon": "+6h",
+        "p50 Forecast (ug/m3)": null,
+        "80% Conformal Band [p10, p90]": "[Suspended]",
+        "Baseline A (Persistence)": null,
+        "Baseline B (Seasonal-Hour)": null,
+        "CAMS Hindcast": 72.2
+      },
+      {
+        "Horizon": "+12h",
+        "p50 Forecast (ug/m3)": null,
+        "80% Conformal Band [p10, p90]": "[Suspended]",
+        "Baseline A (Persistence)": null,
+        "Baseline B (Seasonal-Hour)": null,
+        "CAMS Hindcast": 79.4
+      },
+      {
+        "Horizon": "+24h",
+        "p50 Forecast (ug/m3)": null,
+        "80% Conformal Band [p10, p90]": "[Suspended]",
+        "Baseline A (Persistence)": null,
+        "Baseline B (Seasonal-Hour)": null,
+        "CAMS Hindcast": 93.8
+      }
+    ],
+    "advisory_triggered": false,
+    "notice": "Multan is an unmonitored district with no active continuous ground-truth sensors. Official health advisories are suspended pending physical sensor installation."
+  }
+}

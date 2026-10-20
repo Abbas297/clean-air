@@ -22,9 +22,13 @@ st.set_page_config(
 )
 
 DB_PATH = Path("data/gold/saaf_hawa.duckdb")
-STATUS_FILE = Path("status.json")
-QUALITY_LOG_FILE = Path("data/gold/quality_log.parquet")
-EVAL_FILE = Path("data/gold/eval_by_group.parquet")
+STATE_DIR = Path("state")
+STATUS_FILE = STATE_DIR / "status.json" if (STATE_DIR / "status.json").exists() else Path("status.json")
+FORECASTS_FILE = STATE_DIR / "forecasts.json"
+EVAL_SUMMARY_FILE = STATE_DIR / "eval_summary.csv" if (STATE_DIR / "eval_summary.csv").exists() else Path("data/gold/eval_summary.parquet")
+EVAL_GROUP_FILE = STATE_DIR / "eval_by_group.csv" if (STATE_DIR / "eval_by_group.csv").exists() else Path("data/gold/eval_by_group.parquet")
+QUALITY_LOG_FILE = STATE_DIR / "quality_log.csv" if (STATE_DIR / "quality_log.csv").exists() else Path("data/gold/quality_log.parquet")
+HISTORY_FILE = STATE_DIR / "recent_history.csv"
 
 @st.cache_resource
 def get_rag_agent():
@@ -88,66 +92,113 @@ with tab2:
 
     city_key = city_choice.lower().strip()
 
+    # Load from committed state/ first
+    city_payload = None
+    if FORECASTS_FILE.exists():
+        with open(FORECASTS_FILE, "r", encoding="utf-8") as f:
+            all_forecasts = json.load(f)
+        city_payload = all_forecasts.get(city_key)
+
     if city_key in ["faisalabad", "multan"]:
-        st.warning(f"⚠️ **Notice: {city_choice} is an UNVALIDATED district without reference ground-truth monitors on OpenAQ.**")
+        notice = city_payload.get("notice") if city_payload else f"{city_choice} is an UNVALIDATED district without continuous reference monitors on OpenAQ."
+        st.warning(f"⚠️ **Notice: {notice}**")
         st.error("District Advisory: SUSPENDED (Unvalidated Ground Truth)")
         st.info(
             "Per Hackathon Guidelines (Section 1), forecasts and automated health advisories are strictly withheld "
             "for unvalidated cities until physical reference or calibrated community monitors are installed."
         )
     else:
-        if DB_PATH.exists():
+        curr_pm, row_id, n_sensors, qc_flag, forecast_rows = None, None, None, None, None
+        if city_payload and city_payload.get("monitored"):
+            curr_pm = city_payload.get("latest_pm")
+            row_id = city_payload.get("row_id")
+            n_sensors = city_payload.get("n_sensors")
+            qc_flag = city_payload.get("qc_flag")
+            forecast_rows = city_payload.get("forecast_table")
+        elif DB_PATH.exists():
             curr_pm, row_id, n_sensors, qc_flag, forecast_rows = generate_forecast_for_city(city_key, DB_PATH)
 
-            if curr_pm is not None and forecast_rows:
-                advisory_active = curr_pm >= 55.5
-                if advisory_active:
-                    st.error("🚨 **DISTRICT ADVISORY APPROVED: LIMIT OUTDOOR ACTIVITIES**")
-                    st.markdown("**Intervention:** Enforce N95 respirators, suspend outdoor school morning assemblies, shift physical education indoors.")
-                else:
-                    st.success("✅ **DISTRICT ADVISORY DRAFT: STANDARD CONDITIONS**")
-                    st.markdown("**Intervention:** Outdoor activities permitted under standard monitoring.")
-
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Latest Calibrated Ground Truth", f"{round(curr_pm, 1)} µg/m³")
-                m2.metric("Active Sensors", f"{n_sensors} ({qc_flag})")
-                m3.metric("Audited Row ID", row_id)
-
-                st.write("#### 24-Hour LightGBM Quantile Forecast vs Declared Baselines")
-                st.dataframe(pd.DataFrame(forecast_rows), use_container_width=True)
+        if curr_pm is not None and forecast_rows:
+            advisory_active = curr_pm >= 55.5
+            if advisory_active:
+                st.error("🚨 **DISTRICT ADVISORY APPROVED: LIMIT OUTDOOR ACTIVITIES**")
+                st.markdown("**Intervention:** Enforce N95 respirators, suspend outdoor school morning assemblies, shift physical education indoors.")
             else:
-                st.info(f"No ground truth data available for {city_choice}.")
+                st.success("✅ **DISTRICT ADVISORY DRAFT: STANDARD CONDITIONS**")
+                st.markdown("**Intervention:** Outdoor activities permitted under standard monitoring.")
+
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Latest Calibrated Ground Truth", f"{round(curr_pm, 1)} µg/m³")
+            m2.metric("Active Sensors", f"{n_sensors} ({qc_flag})")
+            m3.metric("Audited Row ID", row_id)
+
+            st.write("#### 24-Hour LightGBM Quantile Forecast vs Declared Baselines")
+            st.dataframe(pd.DataFrame(forecast_rows), use_container_width=True)
+
+            # 48-Hour Historical Trend
+            if HISTORY_FILE.exists():
+                df_hist = pd.read_csv(HISTORY_FILE)
+                city_hist = df_hist[df_hist["city"].str.lower() == city_key].copy()
+                if not city_hist.empty:
+                    city_hist["ts_utc"] = pd.to_datetime(city_hist["ts_utc"])
+                    city_hist = city_hist.sort_values("ts_utc")
+                    st.write("#### Prior 48-Hour Ground Truth Trend (Calibrated PM2.5 µg/m³)")
+                    st.line_chart(city_hist.set_index("ts_utc")["pm25_cal"])
         else:
-            st.warning("DuckDB database not found.")
+            st.info(f"No ground truth data available for {city_choice}.")
 
 # -------------------------------------------------------------------
 # Tab 3: Scientific Evidence
 # -------------------------------------------------------------------
 with tab3:
     st.subheader("Scientific Evaluation vs Declared Baselines (Held-Out Test Split)")
-    if EVAL_FILE.exists():
-        df_eval = pd.read_parquet(EVAL_FILE)
-        st.dataframe(df_eval, use_container_width=True)
+
+    # 1. Overall Summary
+    if EVAL_SUMMARY_FILE.exists():
+        if EVAL_SUMMARY_FILE.suffix == ".csv":
+            df_summary = pd.read_csv(EVAL_SUMMARY_FILE)
+        else:
+            df_summary = pd.read_parquet(EVAL_SUMMARY_FILE)
+
+        st.write("#### Benchmark: LightGBM + CQR vs Baselines (Like-for-Like Test Split)")
+        st.dataframe(df_summary, use_container_width=True)
 
         st.markdown("""
         ### Declared Success Criteria Verification (Real Held-Out Test Evaluation):
-        1. **Baselines Beaten:** LightGBM Quantile Forecaster strictly outperforms Baseline A (Persistence) and Baseline B (Seasonal-Hour) across $+6\\text{h}, +12\\text{h}, +24\\text{h}$ on real held-out data:
-           - **+6h:** LightGBM MAE **20.82 µg/m³** vs Persistence 28.48 & Seasonal-Hour 23.60.
-           - **+12h:** LightGBM MAE **21.30 µg/m³** vs Persistence 31.74 & Seasonal-Hour 23.60.
-           - **+24h:** LightGBM MAE **21.64 µg/m³** vs Persistence 23.45 & Seasonal-Hour 23.60.
-        2. **Conformal Coverage:** Empirical 80% coverage rate is **83.0% - 84.8%**, conforming strictly within the declared $75\\% - 85\\%$ coverage range.
+        1. **Baselines Beaten:** LightGBM Quantile Forecaster strictly outperforms Baseline A (Persistence) and Baseline B (Seasonal-Hour) across $+6\\text{h}, +12\\text{h}, +24\\text{h}$ on like-for-like joined test rows:
+           - **+6h:** LightGBM MAE **20.52 µg/m³** vs Persistence 28.48 & Seasonal-Hour 23.62.
+           - **+12h:** LightGBM MAE **21.03 µg/m³** vs Persistence 31.77 & Seasonal-Hour 23.63.
+           - **+24h:** LightGBM MAE **21.49 µg/m³** vs Persistence 23.50 & Seasonal-Hour 23.65.
+        2. **Conformal Coverage:** Empirical 80% coverage rate is **82.8% - 84.9%**, conforming strictly within the declared $75\\% - 85\\%$ coverage range.
         3. **Embargo Integrity:** Zero label leakage verified by automated tests enforcing a strict 24-hour embargo between train, validation, and test splits.
         """)
-    else:
-        st.info("Evaluation data not found.")
+
+    # 2. Granular Errors by Group
+    if EVAL_GROUP_FILE.exists():
+        if EVAL_GROUP_FILE.suffix == ".csv":
+            df_group = pd.read_csv(EVAL_GROUP_FILE)
+        else:
+            df_group = pd.read_parquet(EVAL_GROUP_FILE)
+
+        with st.expander("🔍 Granular Errors by Group (City, Season, Diurnal Cycle, AQI Tier)", expanded=True):
+            available_groups = list(df_group["group_type"].unique())
+            group_sel = st.selectbox("Select Evaluation Group Slice:", available_groups, index=0)
+            df_slice = df_group[df_group["group_type"] == group_sel].copy()
+            st.dataframe(df_slice, use_container_width=True)
 
 # -------------------------------------------------------------------
 # Tab 4: Quality Log Viewer
 # -------------------------------------------------------------------
 with tab4:
     st.subheader("Data Quality Gate Audit Trail")
+    df_log = None
     if QUALITY_LOG_FILE.exists():
-        df_log = pd.read_parquet(QUALITY_LOG_FILE)
+        if QUALITY_LOG_FILE.suffix == ".csv":
+            df_log = pd.read_csv(QUALITY_LOG_FILE)
+        else:
+            df_log = pd.read_parquet(QUALITY_LOG_FILE)
+
+    if df_log is not None and not df_log.empty:
         action_filter = st.radio("Filter by Adjudicated Action:", ["ALL", "FIX", "FLAG", "QUARANTINE", "CONFIRM"], horizontal=True)
 
         if action_filter != "ALL" and "action" in df_log.columns:

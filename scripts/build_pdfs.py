@@ -51,12 +51,12 @@ def generate_summary_pdf(output_path: Path = Path("Summary.pdf")):
     elements.append(Spacer(1, 8))
 
     # Model Evaluation Table
-    elements.append(Paragraph("3. Scientific Evaluation vs Declared Baselines (Held-out Test Split, 24h Embargo)", heading_style))
+    elements.append(Paragraph("3. Scientific Evaluation vs Declared Baselines (Like-for-Like Held-out Test Split, 24h Embargo)", heading_style))
     table_data = [
         ["Forecast Horizon", "Baseline A (Persistence) MAE", "Baseline B (Seasonal-Hour) MAE", "Saaf Hawa LightGBM+CQR MAE", "80% Conformal Coverage"],
-        ["+6 Hours", "28.48 ug/m3", "23.60 ug/m3", "20.82 ug/m3", "83.0% (PASS)"],
-        ["+12 Hours", "31.74 ug/m3", "23.60 ug/m3", "21.30 ug/m3", "84.5% (PASS)"],
-        ["+24 Hours", "23.45 ug/m3", "23.60 ug/m3", "21.64 ug/m3", "84.8% (PASS)"],
+        ["+6 Hours", "28.48 ug/m3", "23.62 ug/m3", "20.52 ug/m3", "82.8% (PASS)"],
+        ["+12 Hours", "31.77 ug/m3", "23.63 ug/m3", "21.03 ug/m3", "84.6% (PASS)"],
+        ["+24 Hours", "23.50 ug/m3", "23.65 ug/m3", "21.49 ug/m3", "84.9% (PASS)"],
     ]
     t = Table(table_data, colWidths=[90, 115, 120, 120, 95])
     t.setStyle(TableStyle([
@@ -69,6 +69,11 @@ def generate_summary_pdf(output_path: Path = Path("Summary.pdf")):
         ("BACKGROUND", (3, 1), (3, -1), colors.HexColor("#e8f4f8")),
     ]))
     elements.append(t)
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(
+        "<i>*Baseline Invariance Note: Baseline B (Seasonal-Hour) MAE is ~23.6 ug/m3 across horizons because previous 7-day occurrences for target hour (t+h) are identical for h<=24h. Post-March 2025 ground truth is an operational calibrated estimate.</i>",
+        body_style
+    ))
     elements.append(Spacer(1, 8))
 
     # Grounded RAG & Responsible AI
@@ -117,7 +122,7 @@ def generate_dataset_proposal_pdf(output_path: Path = Path("datasetproposal/data
     elements.append(Paragraph("2. Original Publishers & Multi-Source Independence", heading_style))
     elements.append(Paragraph(
         "1. <b>Live Target Ground Truth:</b> Pakistan Air Quality Initiative (PAQI) via OpenAQ (CC BY 4.0 / Open Data).<br/>"
-        "2. <b>Historical Calibration Reference:</b> U.S. Department of State / EPA AirNow historical archive (Public Domain). <i>[Source not on track list]</i>.<br/>"
+        "2. <b>Historical Calibration Reference:</b> U.S. Diplomatic Post AirNow monitors via OpenAQ v3 (Public Domain). <i>[Source not on track list]</i>.<br/>"
         "3. <b>Model Atmospheric Feed:</b> Copernicus ECMWF CAMS and ERA5 via Open-Meteo (CC BY 4.0 Non-commercial).<br/>"
         "4. <b>Transboundary Fire Signal:</b> NASA Earthdata / LANCE FIRMS VIIRS & MODIS (Public Domain).<br/>"
         "5. <b>Standards & Guidance:</b> WHO Global Air Quality Guidelines 2021 & Punjab Environmental Quality Standards (PEQS).",
@@ -130,6 +135,7 @@ def generate_dataset_proposal_pdf(output_path: Path = Path("datasetproposal/data
         "• <b>Contract:</b> Timestamps stored in UTC. Missing target values remain NULL. Deterministic row IDs: {CITY}-{YYYYMMDDTHHZ}.<br/>"
         "• <b>Volume:</b> 56,388 ground-truth city-hourly records, 28,652 embassy calibration rows, and 133,440 atmospheric feature rows, exceeding the 50,000 threshold.<br/>"
         "• <b>Baselines:</b> Baseline A (Persistence at t) and Baseline B (Seasonal-Hour mean of target hour over past 7 days).<br/>"
+        "• <b>Primary Limitation:</b> Post-March 2025 ground truth is an operational estimate calibrated from community sensors rather than direct BAM reference measurements.<br/>"
         "• <b>Integrity:</b> SHA-256 computed on ingest and audited in manifest.csv. 24-hour embargo enforced between splits.",
         body_style
     ))
