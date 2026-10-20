@@ -1,6 +1,13 @@
+import sys
+from pathlib import Path
+
+# Fix sys.path for Streamlit Cloud / Hugging Face Spaces / Subdirectory entrypoints
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from datetime import datetime, timezone
 import json
-from pathlib import Path
 import duckdb
 import gradio as gr
 import pandas as pd
