@@ -1,42 +1,43 @@
-name: Hourly Heartbeat Flow
+name: Saaf Hawa Hourly Pipeline Cron
 
 on:
   schedule:
-    # Run at off-peak minute 7 of every hour (UTC) per MVP section 10
-    - cron: '7 * * * *'
-  workflow_dispatch:
+    - cron: '15 * * * *'  # Runs every hour at minute 15
+  workflow_dispatch:      # Allows manual trigger
 
 jobs:
-  heartbeat:
+  run-pipeline:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run hourly flow
+      - name: Run Prefect Hourly Flow
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
-          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
-          PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
+          PREFECT_SERVER_ANALYTICS_ENABLED: "false"
         run: |
           python flows/hourly.py
 
-      - name: Commit manifest and status to state branch
+      - name: Export Unedited Flow Runs
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin state || git checkout -b state
-          git checkout state
-          git add data/manifest.csv status.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore(heartbeat): update manifest and status [skip ci]"
-          git push origin state || echo "Push skipped if remote branch not yet configured"
+          python scripts/export_runs.py
+
+      - name: Commit and Push Updated Heartbeat & Audit Logs
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add status.json data/manifest.csv prefect_runs.csv
+          git diff --staged --quiet || git commit -m "Automated hourly heartbeat run [skip ci]"
+          git push

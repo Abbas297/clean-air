@@ -8,15 +8,19 @@ import requests
 from src.ingest.manifest import write_manifest_row
 
 FIRMS_API_BASE = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
+FIRMS_OPEN_SOUTH_ASIA_7D = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_South_Asia_7d.csv"
 
 def fetch_latest_fires(
     config: Dict[str, Any],
     output_dir: Optional[Path] = None,
-    day_range: int = 10,
+    day_range: int = 7,
 ) -> Path:
     """
-    Fetches thermal anomalies and fire detection records from NASA FIRMS Area API
+    Fetches real thermal anomalies and fire detection records from NASA FIRMS
     for the Punjab transboundary bounding box (28-34 N, 70-77 E).
+    Uses NASA FIRMS open South Asia VIIRS data feed or FIRMS Area API.
+    ZERO SYNTHETIC DATA: In the event of network failure or zero detections,
+    records remain empty — synthetic fires are NEVER generated.
     Saves raw Bronze records into data/bronze/firms/ and logs SHA-256 to manifest.csv.
     """
     now_utc = datetime.now(timezone.utc)
@@ -35,6 +39,7 @@ def fetch_latest_fires(
 
     records: List[Dict[str, Any]] = []
 
+    # Priority 1: Direct API with Key if provided
     if map_key and map_key != "DEMO_KEY":
         try:
             url = f"{FIRMS_API_BASE}/{map_key}/{source}/{area_coords}/{day_range}"
@@ -56,38 +61,50 @@ def fetch_latest_fires(
                         "fetch_time_utc": fetch_time_iso,
                     })
         except Exception as e:
-            print(f"[FIRMS] Remote fetch warning: {e}. Generating transboundary baseline series.")
+            print(f"[FIRMS] Area API query warning: {e}. Falling back to open South Asia CSV feed.")
 
+    # Priority 2: NASA Open NRT CSV Feed for South Asia (No Key Required, Public Domain)
     if not records:
-        # Generate representative seasonal transboundary fire distribution
-        # High fire activity in Punjab stubble burning season (Oct 15 - Nov 30)
-        import numpy as np
-        np.random.seed(42)
-        dates = pd.date_range(end=now_utc.date(), periods=day_range, freq="D")
-        for d in dates:
-            d_str = d.strftime("%Y-%m-%d")
-            # Peak in Oct/Nov
-            is_stubble_season = d.month in (10, 11)
-            num_fires = int(np.random.poisson(lam=120 if is_stubble_season else 8))
-            lats = np.random.uniform(bbox["min_lat"], bbox["max_lat"], size=num_fires)
-            lons = np.random.uniform(bbox["min_lon"], bbox["max_lon"], size=num_fires)
-            frps = np.random.exponential(scale=18.5 if is_stubble_season else 4.2, size=num_fires)
-            
-            for lat, lon, frp in zip(lats, lons, frps):
-                records.append({
-                    "latitude": round(float(lat), 4),
-                    "longitude": round(float(lon), 4),
-                    "brightness": round(float(320.0 + frp * 2.1), 1),
-                    "frp": round(float(frp), 2),
-                    "acq_date": d_str,
-                    "acq_time": "1200",
-                    "confidence": "nominal",
-                    "satellite": "SNPP",
-                    "instrument": "VIIRS",
-                    "fetch_time_utc": fetch_time_iso,
-                })
+        try:
+            print("[FIRMS] Querying NASA open NRT 7-day South Asia fire detection feed...")
+            resp = requests.get(FIRMS_OPEN_SOUTH_ASIA_7D, timeout=30)
+            if resp.status_code == 200 and "latitude" in resp.text:
+                import io
+                df_all = pd.read_csv(io.StringIO(resp.text))
+                # Filter to Punjab transboundary bounding box
+                punjab_mask = (
+                    (df_all["latitude"] >= bbox["min_lat"]) &
+                    (df_all["latitude"] <= bbox["max_lat"]) &
+                    (df_all["longitude"] >= bbox["min_lon"]) &
+                    (df_all["longitude"] <= bbox["max_lon"])
+                )
+                df_punjab = df_all[punjab_mask]
+                for _, row in df_punjab.iterrows():
+                    records.append({
+                        "latitude": float(row.get("latitude", 0.0)),
+                        "longitude": float(row.get("longitude", 0.0)),
+                        "brightness": float(row.get("bright_ti4", 300.0)),
+                        "frp": float(row.get("frp", 0.0)),
+                        "acq_date": str(row.get("acq_date", "")),
+                        "acq_time": str(row.get("acq_time", "")),
+                        "confidence": str(row.get("confidence", "nominal")),
+                        "satellite": str(row.get("satellite", "SNPP")),
+                        "instrument": "VIIRS",
+                        "fetch_time_utc": fetch_time_iso,
+                    })
+                print(f"[FIRMS] Filtered {len(records)} real active fires in Punjab bounding box from NASA.")
+        except Exception as e:
+            print(f"[FIRMS] Error fetching open South Asia fires: {e}")
 
-    df = pd.DataFrame(records)
+    # Honest zero-fallback: if records is empty, save empty typed DataFrame
+    if not records:
+        df = pd.DataFrame(columns=[
+            "latitude", "longitude", "brightness", "frp", "acq_date", "acq_time",
+            "confidence", "satellite", "instrument", "fetch_time_utc"
+        ])
+    else:
+        df = pd.DataFrame(records)
+
     out_file = output_dir / f"bronze_firms_{ts_str}.parquet"
     df.to_parquet(out_file, engine="pyarrow", index=False)
 
@@ -103,6 +120,7 @@ def fetch_latest_fires(
         manifest_path=manifest_path,
     )
 
+    print(f"[FIRMS] Landed {len(df)} real fire records to {out_file}")
     return out_file
 
 if __name__ == "__main__":

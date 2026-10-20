@@ -74,6 +74,9 @@ paths:
   quality_log: "data/gold/quality_log.parquet"
   status_json: "status.json"
 
+api_keys:
+  openaq: "b0c41a9fb048c8f264d6702db60a954e67f5a566003ee7ab6da5b153607b1212"
+
 endpoints:
   openaq_v3_base: "https://api.openaq.org/v3"
   openmeteo_air_quality: "https://air-quality-api.open-meteo.com/v1/air-quality"

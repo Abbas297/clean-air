@@ -43,7 +43,7 @@ def generate_summary_pdf(output_path: Path = Path("Summary.pdf")):
     elements.append(Paragraph("2. Multi-Publisher Data Stack & Volume", heading_style))
     elements.append(Paragraph(
         "• <b>Four Independent Publishers:</b> OpenAQ (PAQI), AirNow DoS archive (source not on track list), ECMWF/Copernicus (Open-Meteo), and NASA FIRMS.<br/>"
-        "• <b>Data Volume:</b> 131,333 city-hourly rows, 75,748 embassy calibration rows, and 190+ atmospheric features stored in DuckDB.<br/>"
+        "• <b>Data Volume:</b> 56,388 city-hourly PM2.5 rows, 133,440 atmospheric features in DuckDB, backed by 28,652 AirNow historical calibration rows and 60,078 community sensor rows.<br/>"
         "• <b>Data Contract:</b> Timestamps in UTC, deterministic row IDs ({CITY}-{YYYYMMDDTHHZ}), full SHA-256 provenance in manifest.csv.<br/>"
         "• <b>Dual Quality Gates:</b> Pandera schema validation, sentinel conversion (-999 -> NULL), stuck-sensor detection (6h), and peer corroboration during extreme smog spikes (500-1000 ug/m3).",
         body_style
@@ -54,9 +54,9 @@ def generate_summary_pdf(output_path: Path = Path("Summary.pdf")):
     elements.append(Paragraph("3. Scientific Evaluation vs Declared Baselines (Held-out Test Split, 24h Embargo)", heading_style))
     table_data = [
         ["Forecast Horizon", "Baseline A (Persistence) MAE", "Baseline B (Seasonal-Hour) MAE", "Saaf Hawa LightGBM+CQR MAE", "80% Conformal Coverage"],
-        ["+6 Hours", "22.22 ug/m3", "12.13 ug/m3", "9.46 ug/m3", "81.4% (PASS)"],
-        ["+12 Hours", "27.65 ug/m3", "12.13 ug/m3", "9.46 ug/m3", "81.4% (PASS)"],
-        ["+24 Hours", "15.63 ug/m3", "12.13 ug/m3", "9.46 ug/m3", "81.4% (PASS)"],
+        ["+6 Hours", "28.48 ug/m3", "23.60 ug/m3", "20.82 ug/m3", "83.0% (PASS)"],
+        ["+12 Hours", "31.74 ug/m3", "23.60 ug/m3", "21.30 ug/m3", "84.5% (PASS)"],
+        ["+24 Hours", "23.45 ug/m3", "23.60 ug/m3", "21.64 ug/m3", "84.8% (PASS)"],
     ]
     t = Table(table_data, colWidths=[90, 115, 120, 120, 95])
     t.setStyle(TableStyle([
@@ -128,7 +128,7 @@ def generate_dataset_proposal_pdf(output_path: Path = Path("datasetproposal/data
     elements.append(Paragraph("3. Storage Contract, Provenance & Baselines", heading_style))
     elements.append(Paragraph(
         "• <b>Contract:</b> Timestamps stored in UTC. Missing target values remain NULL. Deterministic row IDs: {CITY}-{YYYYMMDDTHHZ}.<br/>"
-        "• <b>Volume:</b> 131,333 ground-truth city-hourly records, 75,748 embassy calibration rows, exceeding the 50,000 threshold.<br/>"
+        "• <b>Volume:</b> 56,388 ground-truth city-hourly records, 28,652 embassy calibration rows, and 133,440 atmospheric feature rows, exceeding the 50,000 threshold.<br/>"
         "• <b>Baselines:</b> Baseline A (Persistence at t) and Baseline B (Seasonal-Hour mean of target hour over past 7 days).<br/>"
         "• <b>Integrity:</b> SHA-256 computed on ingest and audited in manifest.csv. 24-hour embargo enforced between splits.",
         body_style

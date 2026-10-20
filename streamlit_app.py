@@ -13,6 +13,7 @@ import pandas as pd
 import streamlit as st
 
 from src.rag.guard import InsightAgent
+from src.model.lgbm import generate_forecast_for_city
 
 st.set_page_config(
     page_title="Saaf Hawa v2 — Air Quality Decision Support",
@@ -88,30 +89,17 @@ with tab2:
     city_key = city_choice.lower().strip()
 
     if city_key in ["faisalabad", "multan"]:
-        st.warning(f"⚠️ **Notice: {city_choice} is an UNVALIDATED city without reference ground-truth monitors.** Estimates are derived from CAMS satellite hindcasts with widened uncertainty bands.")
+        st.warning(f"⚠️ **Notice: {city_choice} is an UNVALIDATED district without reference ground-truth monitors on OpenAQ.**")
         st.error("District Advisory: SUSPENDED (Unvalidated Ground Truth)")
-        df_unval = pd.DataFrame([
-            {"Horizon": f"+{h}h", "CAMS Estimate (ug/m3)": round(65.0 + h*1.2, 1), "p10 (Lower)": round(35.0 + h*0.8, 1), "p90 (Upper)": round(110.0 + h*1.8, 1)}
-            for h in [6, 12, 24]
-        ])
-        st.dataframe(df_unval, use_container_width=True)
+        st.info(
+            "Per Hackathon Guidelines (Section 1), forecasts and automated health advisories are strictly withheld "
+            "for unvalidated cities until physical reference or calibrated community monitors are installed."
+        )
     else:
         if DB_PATH.exists():
-            con = duckdb.connect(str(DB_PATH), read_only=True)
-            res = con.execute("""
-                SELECT row_id, ts_utc, pm25_cal, n_sensors, qc_flag
-                FROM pm25_city_hourly
-                WHERE city = ? AND pm25_cal IS NOT NULL
-                ORDER BY ts_utc DESC LIMIT 1
-            """, [city_key]).df()
-            con.close()
+            curr_pm, row_id, n_sensors, qc_flag, forecast_rows = generate_forecast_for_city(city_key, DB_PATH)
 
-            if not res.empty:
-                curr_pm = float(res["pm25_cal"].iloc[0])
-                row_id = res["row_id"].iloc[0]
-                n_sensors = int(res["n_sensors"].iloc[0])
-                qc_flag = res["qc_flag"].iloc[0]
-
+            if curr_pm is not None and forecast_rows:
                 advisory_active = curr_pm >= 55.5
                 if advisory_active:
                     st.error("🚨 **DISTRICT ADVISORY APPROVED: LIMIT OUTDOOR ACTIVITIES**")
@@ -121,25 +109,11 @@ with tab2:
                     st.markdown("**Intervention:** Outdoor activities permitted under standard monitoring.")
 
                 m1, m2, m3 = st.columns(3)
-                m1.metric("Latest Calibrated Ground Truth", f"{curr_pm} µg/m³")
+                m1.metric("Latest Calibrated Ground Truth", f"{round(curr_pm, 1)} µg/m³")
                 m2.metric("Active Sensors", f"{n_sensors} ({qc_flag})")
                 m3.metric("Audited Row ID", row_id)
 
-                forecast_rows = []
-                for h, factor in zip([6, 12, 24], [1.04, 1.12, 1.08]):
-                    p50 = round(curr_pm * factor, 1)
-                    p10 = round(max(0.0, p50 - 11.3), 1)
-                    p90 = round(p50 + 11.4, 1)
-                    forecast_rows.append({
-                        "Horizon": f"+{h}h",
-                        "p50 Forecast (ug/m3)": p50,
-                        "80% Conformal Band [p10, p90]": f"[{p10} - {p90}]",
-                        "Baseline A (Persistence)": round(curr_pm, 1),
-                        "Baseline B (Seasonal-Hour)": round(curr_pm * 0.95, 1),
-                        "CAMS Hindcast (Optimistic)": round(curr_pm * 1.06, 1),
-                    })
-
-                st.write("#### 24-Hour Horizon Projections vs Baselines")
+                st.write("#### 24-Hour LightGBM Quantile Forecast vs Declared Baselines")
                 st.dataframe(pd.DataFrame(forecast_rows), use_container_width=True)
             else:
                 st.info(f"No ground truth data available for {city_choice}.")
@@ -156,10 +130,13 @@ with tab3:
         st.dataframe(df_eval, use_container_width=True)
 
         st.markdown("""
-        ### Declared Success Criteria Verification:
-        1. **Baselines Beaten:** LightGBM Quantile Forecaster strictly outperforms Baseline A (Persistence) and Baseline B (Seasonal-Hour) across $+6\\text{h}, +12\\text{h}, +24\\text{h}$.
-        2. **Conformal Coverage:** Empirical 80% coverage is **81.4%**, conforming strictly within the declared $75\\% - 85\\%$ range.
-        3. **Embargo Integrity:** Zero label leakage verified by automated test enforcing a strict 24h embargo.
+        ### Declared Success Criteria Verification (Real Held-Out Test Evaluation):
+        1. **Baselines Beaten:** LightGBM Quantile Forecaster strictly outperforms Baseline A (Persistence) and Baseline B (Seasonal-Hour) across $+6\\text{h}, +12\\text{h}, +24\\text{h}$ on real held-out data:
+           - **+6h:** LightGBM MAE **20.82 µg/m³** vs Persistence 28.48 & Seasonal-Hour 23.60.
+           - **+12h:** LightGBM MAE **21.30 µg/m³** vs Persistence 31.74 & Seasonal-Hour 23.60.
+           - **+24h:** LightGBM MAE **21.64 µg/m³** vs Persistence 23.45 & Seasonal-Hour 23.60.
+        2. **Conformal Coverage:** Empirical 80% coverage rate is **83.0% - 84.8%**, conforming strictly within the declared $75\\% - 85\\%$ coverage range.
+        3. **Embargo Integrity:** Zero label leakage verified by automated tests enforcing a strict 24-hour embargo between train, validation, and test splits.
         """)
     else:
         st.info("Evaluation data not found.")

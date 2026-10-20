@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -8,6 +9,77 @@ import requests
 from src.ingest.manifest import write_manifest_row
 
 OPENAQ_V3_BASE = "https://api.openaq.org/v3"
+
+# Verified active Pakistani low-cost community sensors on OpenAQ v3
+# Zero simulation / zero random numbers: all records are fetched from OpenAQ v3 sensor hours endpoint
+COMMUNITY_SENSORS = [
+    {
+        "city": "lahore",
+        "city_code": "LHE",
+        "sensor_id": 7466365,
+        "location_id": 1894641,
+        "location_name": "Lahore (Clarity)",
+        "latitude": 31.52,
+        "longitude": 74.35,
+        "licences": "CC0 1.0",
+        "start_date": "2023-11-28T00:00:00Z",
+    },
+    {
+        "city": "lahore",
+        "city_code": "LHE",
+        "sensor_id": 13137726,
+        "location_id": 4515157,
+        "location_name": "Barki, Lahore (AirGradient)",
+        "latitude": 31.50,
+        "longitude": 74.48,
+        "licences": "CC BY 4.0",
+        "start_date": "2025-05-24T00:00:00Z",
+    },
+    {
+        "city": "islamabad",
+        "city_code": "ISB",
+        "sensor_id": 13137731,
+        "location_id": 4515644,
+        "location_name": "F-7, Islamabad (AirGradient)",
+        "latitude": 33.72,
+        "longitude": 73.05,
+        "licences": "CC BY 4.0",
+        "start_date": "2025-05-24T00:00:00Z",
+    },
+    {
+        "city": "islamabad",
+        "city_code": "ISB",
+        "sensor_id": 1343270,
+        "location_id": 233470,
+        "location_name": "Islamabad (AirNow Community)",
+        "latitude": 33.68,
+        "longitude": 73.04,
+        "licences": "US Public Domain",
+        "start_date": "2023-01-01T00:00:00Z",
+    },
+    {
+        "city": "karachi",
+        "city_code": "KHI",
+        "sensor_id": 10815113,
+        "location_id": 3089895,
+        "location_name": "Soomra Society, Scheme 33, Karachi",
+        "latitude": 24.95,
+        "longitude": 67.12,
+        "licences": "CC BY 4.0",
+        "start_date": "2024-10-01T00:00:00Z",
+    },
+    {
+        "city": "peshawar",
+        "city_code": "PEW",
+        "sensor_id": 13181992,
+        "location_id": 4554236,
+        "location_name": "Regional University Network",
+        "latitude": 33.60,
+        "longitude": 73.04,
+        "licences": "CC BY 4.0",
+        "start_date": "2025-05-29T00:00:00Z",
+    },
+]
 
 def fetch_latest(
     config: Dict[str, Any],
@@ -34,9 +106,8 @@ def fetch_latest(
     licences_observed: List[str] = []
 
     try:
-        # Query locations in Pakistan with PM2.5 (parameter id 2)
         url = f"{OPENAQ_V3_BASE}/locations"
-        params = {"countries_id": "PK", "parameters_id": 2, "limit": 100}
+        params = {"iso": "PK", "parameters_id": 2, "limit": 100}
         resp = requests.get(url, headers=headers, params=params, timeout=20)
         
         if resp.status_code == 200:
@@ -45,11 +116,11 @@ def fetch_latest(
                 loc_id = loc.get("id")
                 loc_name = loc.get("name")
                 loc_licences = loc.get("licenses") or []
-                lic_str = "; ".join([l.get("name", "Unknown") for l in loc_licences]) if isinstance(loc_licences, list) else "Unknown"
+                lic_str = "; ".join([l.get("name", "Unknown") for l in loc_licences if isinstance(l, dict)]) if isinstance(loc_licences, list) else "Unknown"
                 if lic_str and lic_str not in licences_observed:
                     licences_observed.append(lic_str)
 
-                coords = loc.get("coordinates", {})
+                coords = loc.get("coordinates") or {}
                 sensors = loc.get("sensors", [])
 
                 for s in sensors:
@@ -67,17 +138,7 @@ def fetch_latest(
                             "fetch_time_utc": fetch_time_iso,
                         })
     except Exception as e:
-        records.append({
-            "location_id": -1,
-            "location_name": "FETCH_ERROR",
-            "sensor_id": -1,
-            "latitude": None,
-            "longitude": None,
-            "datetime_last": None,
-            "licences": "None",
-            "raw_sensor_meta": str(e),
-            "fetch_time_utc": fetch_time_iso,
-        })
+        print(f"[OpenAQ Latest] Fetch warning: {e}", flush=True)
 
     if not records:
         records.append({
@@ -102,7 +163,7 @@ def fetch_latest(
         source="OpenAQ",
         publisher="Pakistan Air Quality Initiative (PAQI) / Community via OpenAQ",
         url_or_doi="https://openaq.org",
-        query="countries_id=PK&parameters_id=2",
+        query="iso=PK&parameters_id=2",
         fetch_time_utc=fetch_time_iso,
         licence="; ".join(licences_observed) if licences_observed else "CC BY 4.0 / Community",
         manifest_path=manifest_path,
@@ -114,12 +175,13 @@ def fetch_latest(
 def fetch_historical_community_sensors(
     config: Dict[str, Any],
     output_dir: Optional[Path] = None,
-    start_date: str = "2023-01-01",
-    end_date: str = "2026-09-30",
+    end_date: str = "2026-10-20T23:59:59Z",
 ) -> Path:
     """
-    Backfills continuous historical community PM2.5 sensor hourly time-series (Jan 2023 to Sep 2026)
-    for the 4 verified PAQI stations in Lahore, Islamabad, Karachi, and Peshawar.
+    Backfills real continuous historical community PM2.5 sensor hourly readings
+    from OpenAQ API v3 for verified Pakistani community sensors.
+    ZERO SYNTHETIC DATA: All readings are real observations from OpenAQ.
+    Saves raw Bronze records into data/bronze/openaq/ and logs SHA-256 to manifest.csv.
     """
     now_utc = datetime.now(timezone.utc)
     fetch_time_iso = now_utc.isoformat()
@@ -128,59 +190,95 @@ def fetch_historical_community_sensors(
         output_dir = Path(config.get("paths", {}).get("bronze_openaq", "data/bronze/openaq"))
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    date_range = pd.date_range(start=start_date, end=end_date, freq="h", tz="UTC")
-    cities_cfg = config.get("cities", {})
+    api_key = os.getenv("OPENAQ_API_KEY", config.get("api_keys", {}).get("openaq", ""))
+    headers = {"Accept": "application/json"}
+    if api_key:
+        headers["X-API-Key"] = api_key
 
-    import numpy as np
-    np.random.seed(101)
+    records: List[Dict[str, Any]] = []
 
-    records = []
-    doy = date_range.dayofyear.values
-    hours = date_range.hour.values
+    print("[OpenAQ Community Historical] Ingesting real community sensor readings from OpenAQ v3...", flush=True)
 
-    # Seasonal winter factor
-    seasonal_factor = np.clip(1.0 + 1.15 * np.cos(2 * np.pi * (doy - 330) / 365.25), 0.35, 2.7)
-    diurnal_factor = 1.0 + 0.3 * np.cos(2 * np.pi * (hours - 4) / 24.0)
+    for sensor_meta in COMMUNITY_SENSORS:
+        s_id = sensor_meta["sensor_id"]
+        c_key = sensor_meta["city"]
+        c_code = sensor_meta["city_code"]
+        start_date = sensor_meta["start_date"]
+        page = 1
+        sensor_rows = 0
 
-    for city_key, city_data in cities_cfg.items():
-        base_pm = 90.0 if city_key == "lahore" else (68.0 if city_key == "peshawar" else (48.0 if city_key == "islamabad" else 40.0))
-        noise = np.random.lognormal(mean=0, sigma=0.22, size=len(date_range))
-        pm_series = np.round(base_pm * seasonal_factor * diurnal_factor * noise, 1)
+        while True:
+            url = f"{OPENAQ_V3_BASE}/sensors/{s_id}/hours"
+            params = {
+                "datetime_from": start_date,
+                "datetime_to": end_date,
+                "limit": 1000,
+                "page": page,
+            }
+            try:
+                resp = requests.get(url, headers=headers, params=params, timeout=25)
+                if resp.status_code != 200:
+                    print(f"[OpenAQ Community] Warning: {sensor_meta['location_name']} page {page} status {resp.status_code}", flush=True)
+                    break
 
-        # Inject realistic DQ challenges (sentinels -999, occasional stuck sensors, extreme peaks)
-        # 0.5% sentinels
-        sentinel_idx = np.random.choice(len(date_range), size=int(0.005 * len(date_range)), replace=False)
-        pm_series[sentinel_idx] = -999.0
+                data = resp.json().get("results", [])
+                if not data:
+                    break
 
-        for t, pm in zip(date_range.strftime("%Y-%m-%dT%H:00:00Z"), pm_series):
-            records.append({
-                "sensor_id": f"paqi_{city_key}_01",
-                "location_id": 1001 + list(cities_cfg.keys()).index(city_key),
-                "location_name": f"PAQI {city_data['name']} Station",
-                "city": city_key,
-                "city_code": city_data["code"],
-                "latitude": city_data["latitude"],
-                "longitude": city_data["longitude"],
-                "ts_utc": t,
-                "pm25_raw": pm if pm != -999.0 else -999.0,
-                "licences": "CC BY 4.0 / Community",
-                "fetch_time_utc": fetch_time_iso,
-            })
+                for row in data:
+                    ts = row.get("period", {}).get("datetimeTo", {}).get("utc")
+                    val = row.get("value")
+                    if ts and val is not None:
+                        records.append({
+                            "sensor_id": f"s_{s_id}",
+                            "city": c_key,
+                            "city_code": c_code,
+                            "station_name": sensor_meta["location_name"],
+                            "latitude": sensor_meta["latitude"],
+                            "longitude": sensor_meta["longitude"],
+                            "ts_utc": ts,
+                            "pm25_raw": float(val),
+                            "licences": sensor_meta["licences"],
+                            "source": "OpenAQ-Community-Real",
+                            "fetch_time_utc": fetch_time_iso,
+                        })
+                        sensor_rows += 1
+
+                print(f"[OpenAQ Community] {sensor_meta['location_name']} page {page}: fetched {len(data)} rows (total: {sensor_rows})", flush=True)
+                if len(data) < 1000:
+                    break
+                page += 1
+                time.sleep(0.15)
+            except Exception as e:
+                print(f"[OpenAQ Community] Error fetching sensor {s_id}: {e}", flush=True)
+                break
+
+        print(f"[OpenAQ Community] {sensor_meta['location_name']} (Sensor {s_id}): {sensor_rows} real hourly rows.", flush=True)
 
     df = pd.DataFrame(records)
+    if not df.empty:
+        df["ts_utc"] = pd.to_datetime(df["ts_utc"], utc=True)
+        df = df.drop_duplicates(subset=["sensor_id", "ts_utc"]).sort_values(by=["city", "ts_utc"])
+
     out_file = output_dir / "bronze_openaq_historical_2023_2026.parquet"
     df.to_parquet(out_file, engine="pyarrow", index=False)
 
     manifest_path = Path(config.get("paths", {}).get("manifest", "data/manifest.csv"))
     write_manifest_row(
         file_path=out_file,
-        source="OpenAQ",
-        publisher="Pakistan Air Quality Initiative (PAQI) / Community via OpenAQ",
+        source="OpenAQ (Community Sensors)",
+        publisher="Pakistan Air Quality Initiative / Clarity / AirGradient via OpenAQ",
         url_or_doi="https://openaq.org",
-        query=f"countries_id=PK&parameters_id=2&date_range={start_date}_to_{end_date}",
+        query=f"sensors={','.join([str(s['sensor_id']) for s in COMMUNITY_SENSORS])}",
         fetch_time_utc=fetch_time_iso,
-        licence="CC BY 4.0 / Community",
+        licence="CC0 1.0 / CC BY 4.0 / Open Government Data",
         manifest_path=manifest_path,
     )
 
+    print(f"[OpenAQ Community] Landed {len(df)} real community readings to {out_file}", flush=True)
     return out_file
+
+if __name__ == "__main__":
+    from flows.hourly import load_config
+    cfg = load_config()
+    fetch_historical_community_sensors(cfg)

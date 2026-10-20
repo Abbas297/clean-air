@@ -107,52 +107,42 @@ def build_gold_warehouse(
     else:
         df_fires = pd.DataFrame()
 
-    features_list = []
-    for _, row in df_meteo.iterrows():
-        city_key = row["city"]
-        city_code = row["city_code"]
-        ts = row["ts_utc"]
-        row_id = f"{city_code}-{ts.strftime('%Y%m%dT%H00Z')}"
-
-        # Wind u and v components calculation from speed and direction
-        w_speed = row.get("wind_speed_10m", 2.5) or 2.5
-        w_dir = row.get("wind_direction_10m", 180.0) or 180.0
+    if not df_meteo.empty:
+        df_features = df_meteo.copy()
+        df_features["ts_utc"] = pd.to_datetime(df_features["ts_utc"], utc=True)
+        df_features["row_id"] = df_features["city_code"] + "-" + df_features["ts_utc"].dt.strftime("%Y%m%dT%H00Z")
+        w_speed = df_features["wind_speed_10m"].fillna(2.5)
+        w_dir = df_features["wind_direction_10m"].fillna(180.0)
         rad = np.deg2rad(w_dir)
-        wind_u = -w_speed * np.sin(rad)
-        wind_v = -w_speed * np.cos(rad)
+        df_features["wind_u"] = -w_speed * np.sin(rad)
+        df_features["wind_v"] = -w_speed * np.cos(rad)
+        df_features["cams_pm25"] = df_features["cams_pm2_5"] if "cams_pm2_5" in df_features.columns else None
+        df_features["temp"] = df_features["temp_2m"] if "temp_2m" in df_features.columns else None
+        df_features["rh"] = df_features["rh_2m"] if "rh_2m" in df_features.columns else None
 
-        # Fire lag features (1, 2, 3 days ago)
-        fire_feats = {
-            "fire_count_lag1": 0, "fire_count_lag2": 0, "fire_count_lag3": 0,
-            "fire_frp_lag1": 0.0, "fire_frp_lag2": 0.0, "fire_frp_lag3": 0.0,
-        }
-        if not df_fires.empty:
+        # Vectorized fire lag features
+        for lag in [1, 2, 3]:
+            df_features[f"fire_count_lag{lag}"] = 0
+            df_features[f"fire_frp_lag{lag}"] = 0.0
+
+        if not df_fires.empty and "date" in df_fires.columns:
+            df_fires_lookup = df_fires.set_index("date")
             for lag in [1, 2, 3]:
-                lag_date = (ts - timedelta(days=lag)).strftime("%Y-%m-%d")
-                match = df_fires[df_fires["date"] == lag_date]
-                if not match.empty:
-                    fire_feats[f"fire_count_lag{lag}"] = int(match["fire_count"].iloc[0])
-                    fire_feats[f"fire_frp_lag{lag}"] = float(match["total_frp"].iloc[0])
+                lag_dates = (df_features["ts_utc"] - pd.to_timedelta(lag, unit="D")).dt.strftime("%Y-%m-%d")
+                if "fire_count" in df_fires_lookup.columns:
+                    df_features[f"fire_count_lag{lag}"] = lag_dates.map(df_fires_lookup["fire_count"]).fillna(0).astype(int)
+                if "total_frp" in df_fires_lookup.columns:
+                    df_features[f"fire_frp_lag{lag}"] = lag_dates.map(df_fires_lookup["total_frp"]).fillna(0.0).astype(float)
 
-        features_list.append({
-            "row_id": row_id,
-            "city": city_key,
-            "city_code": city_code,
-            "ts_utc": ts,
-            "cams_pm25": row.get("cams_pm2_5"),
-            "cams_pm10": row.get("cams_pm10"),
-            "aod": row.get("aod"),
-            "temp": row.get("temp_2m"),
-            "rh": row.get("rh_2m"),
-            "wind_u": float(wind_u),
-            "wind_v": float(wind_v),
-            "precip": row.get("precip"),
-            **fire_feats,
-        })
-
-    df_features = pd.DataFrame(features_list)
-    if not df_features.empty:
-        df_features = df_features.drop_duplicates(subset=["row_id"]).sort_values(by=["city", "ts_utc"])
+        feature_cols = [
+            "row_id", "city", "city_code", "ts_utc", "cams_pm25", "cams_pm10", "aod",
+            "temp", "rh", "wind_u", "wind_v", "precip",
+            "fire_count_lag1", "fire_count_lag2", "fire_count_lag3",
+            "fire_frp_lag1", "fire_frp_lag2", "fire_frp_lag3",
+        ]
+        df_features = df_features[[c for c in feature_cols if c in df_features.columns]].drop_duplicates(subset=["row_id"]).sort_values(by=["city", "ts_utc"])
+    else:
+        df_features = pd.DataFrame()
 
     # -----------------------------------------------------------------
     # 3. DQ Gate 2: Completeness, Freshness, and Drift (PSI) Checks

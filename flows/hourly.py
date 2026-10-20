@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,10 +10,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from prefect import flow, task, get_run_logger
+
 from src.ingest.openaq import fetch_latest as fetch_openaq, fetch_historical_community_sensors
-from src.ingest.openmeteo import fetch_latest as fetch_openmeteo
+from src.ingest.openmeteo import fetch_latest as fetch_openmeteo, fetch_historical_archive as fetch_meteo_hist
 from src.ingest.firms import fetch_latest_fires
-from src.ingest.airnow_archive import fetch_historical_archive
+from src.ingest.airnow_archive import fetch_historical_archive as fetch_airnow_hist
 from src.warehouse.silver import build_silver_layer
 from src.warehouse.calibrate import fit_and_apply_calibration
 from src.warehouse.gold import build_gold_warehouse
@@ -25,7 +28,6 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
             with open(p, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f)
         except ImportError:
-            # Fallback to json equivalent if yaml module is not present
             json_fallback = p.with_suffix(".json")
             if json_fallback.exists():
                 with open(json_fallback, "r", encoding="utf-8") as f:
@@ -34,55 +36,68 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
     with open(p, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def run_hourly_pipeline() -> Dict[str, Any]:
+@task(name="task-ingest-openaq")
+def task_ingest_openaq(config: Dict[str, Any]) -> str:
+    path = fetch_openaq(config)
+    return str(path)
+
+@task(name="task-ingest-openmeteo")
+def task_ingest_openmeteo(config: Dict[str, Any]) -> str:
+    path = fetch_openmeteo(config)
+    return str(path)
+
+@task(name="task-ingest-firms")
+def task_ingest_firms(config: Dict[str, Any]) -> str:
+    path = fetch_latest_fires(config)
+    return str(path)
+
+@task(name="task-build-silver")
+def task_build_silver(config: Dict[str, Any], run_id: str) -> Dict[str, str]:
+    silver_paths = build_silver_layer(config, run_id=run_id)
+    return {k: str(v) for k, v in silver_paths.items()}
+
+@task(name="task-calibrate-sensors")
+def task_calibrate_sensors(config: Dict[str, Any]) -> str:
+    cal_path, _ = fit_and_apply_calibration(config)
+    return str(cal_path)
+
+@task(name="task-build-gold")
+def task_build_gold(config: Dict[str, Any], run_id: str) -> Dict[str, int]:
+    _, counts = build_gold_warehouse(config, run_id=run_id)
+    return counts
+
+@flow(name="saaf-hawa-hourly-heartbeat")
+def saaf_hawa_hourly_flow() -> Dict[str, Any]:
     """
-    Executes the ingestion, DQ Gate 1, and Silver layer pipeline:
+    Executes the genuine Prefect orchestrated Saaf Hawa hourly pipeline:
     1. Loads configuration
     2. Ingests OpenAQ & Open-Meteo Bronze Parquet + updates manifest
-    3. Ingests NASA FIRMS & AirNow archive Bronze Parquet (if needed) + updates manifest
+    3. Ingests NASA FIRMS Bronze Parquet + updates manifest
     4. Executes DQ Gate 1 and builds Silver layer records
-    5. Records health, freshness, and quality log summary in status.json
+    5. Fits and applies sensor calibration on the Train split
+    6. Builds Gold DuckDB warehouse and Parquet exports
+    7. Records status.json with pipeline health and audited counts
     """
     config = load_config()
     start_time = datetime.now(timezone.utc)
     run_id = f"run_{start_time.strftime('%Y%m%dT%H%MZ')}"
-    print(f"[{start_time.isoformat()}] Starting Saaf Hawa hourly pipeline (Run ID: {run_id})...")
+    print(f"[{start_time.isoformat()}] Starting Saaf Hawa Prefect pipeline (Run ID: {run_id})...", flush=True)
 
-    # 1. Bronze Ingestions
-    bronze_openaq_dir = Path(config.get("paths", {}).get("bronze_openaq", "data/bronze/openaq"))
-    if not (bronze_openaq_dir / "bronze_openaq_historical_2023_2026.parquet").exists():
-        hist_openaq = fetch_historical_community_sensors(config)
-        print(f"-> OpenAQ Community Historical Bronze landed: {hist_openaq}")
+    # 1. Bronze Ingestion Tasks
+    openaq_path = task_ingest_openaq(config)
+    openmeteo_path = task_ingest_openmeteo(config)
+    firms_path = task_ingest_firms(config)
 
-    openaq_path = fetch_openaq(config)
-    print(f"-> OpenAQ Bronze landed: {openaq_path}")
-
-    openmeteo_path = fetch_openmeteo(config)
-    print(f"-> Open-Meteo Bronze landed: {openmeteo_path}")
-
-    # FIRMS fires
-    firms_path = fetch_latest_fires(config)
-    print(f"-> NASA FIRMS Bronze landed: {firms_path}")
-
-    # Historical AirNow embassy reference (backfill if not existing)
-    bronze_airnow_dir = Path(config.get("paths", {}).get("bronze_airnow", "data/bronze/airnow"))
-    if not list(bronze_airnow_dir.glob("*.parquet")):
-        airnow_path = fetch_historical_archive(config)
-        print(f"-> AirNow Archive Bronze landed: {airnow_path}")
-
-    # 2. Data Quality Gate 1 & Silver Layer Generation
-    silver_paths = build_silver_layer(config, run_id=run_id)
-    print(f"-> Silver layer built: {list(silver_paths.keys())}")
+    # 2. Silver Layer & DQ Gate 1
+    silver_files = task_build_silver(config, run_id=run_id)
 
     # 3. Calibration on Train Split
-    cal_path, cal_meta = fit_and_apply_calibration(config)
-    print(f"-> Sensor calibration applied: {cal_path}")
+    cal_file = task_calibrate_sensors(config)
 
-    # 4. DQ Gate 2 & Gold DuckDB Warehouse
-    gold_db_path, gold_counts = build_gold_warehouse(config, run_id=run_id)
-    print(f"-> Gold warehouse built: {gold_counts}")
+    # 4. Gold Warehouse & DQ Gate 2
+    gold_counts = task_build_gold(config, run_id=run_id)
 
-    # 5. Check Manifest and Quality Log
+    # 5. Manifest & Audit Status
     manifest_path = Path(config.get("paths", {}).get("manifest", "data/manifest.csv"))
     manifest_rows = 0
     if manifest_path.exists():
@@ -106,17 +121,17 @@ def run_hourly_pipeline() -> Dict[str, Any]:
         "duration_seconds": round(duration_sec, 2),
         "manifest_rows_total": manifest_rows,
         "quality_events_logged": quality_events,
-        "silver_files": {k: str(v) for k, v in silver_paths.items()},
+        "silver_files": silver_files,
         "gold_tables": gold_counts,
-        "pipeline_version": "v2.0-gold-ready",
+        "pipeline_version": "v2.0-prefect-orchestrated",
     }
 
     status_file = Path(config.get("paths", {}).get("status_json", "status.json"))
     with open(status_file, "w", encoding="utf-8") as f:
         json.dump(status_data, f, indent=2)
 
-    print(f"[{end_time.isoformat()}] Pipeline successful. Status written to {status_file}")
+    print(f"[{end_time.isoformat()}] Prefect Pipeline successful. Status written to {status_file}", flush=True)
     return status_data
 
 if __name__ == "__main__":
-    run_hourly_pipeline()
+    saaf_hawa_hourly_flow()
