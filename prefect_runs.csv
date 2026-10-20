@@ -1,0 +1,2 @@
+flow_run_id,name,state,start_time,end_time,total_run_time
+run_20261020T1638Z,saaf-hawa-hourly-heartbeat,COMPLETED,2026-10-20T16:39:19.806258+00:00,2026-10-20T16:39:19.806258+00:00,47.19

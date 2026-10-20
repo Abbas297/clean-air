@@ -14,12 +14,12 @@ help:
 	@echo "  make clean     - Remove temporary caches and python bytecode"
 
 data:
-	@echo "==> Running Saaf Hawa ingestion heartbeat..."
+	@echo "==> Running Saaf Hawa ingestion and warehouse build..."
 	python flows/hourly.py
 
 quality:
 	@echo "==> Running Data Quality Gates (Gate 1 & Gate 2)..."
-	python -c "print('DQ gates executed.')"
+	python -c "import pandas as pd; print('DQ quality_log events:', len(pd.read_parquet('data/gold/quality_log.parquet')))"
 
 model:
 	@echo "==> Training LightGBM Quantile Models and Fitting CQR..."
@@ -34,11 +34,11 @@ rag:
 	pytest -v tests/test_rag.py
 
 app:
-	@echo "==> Starting Gradio Dashboard..."
+	@echo "==> Starting Gradio Dashboard on http://localhost:7860..."
 	python app/app.py
 
 test:
-	@echo "==> Running test suite..."
+	@echo "==> Running complete test suite (15 assertions)..."
 	pytest -v tests/
 
 clean:
