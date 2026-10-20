@@ -173,6 +173,12 @@ def generate_forecast_for_city(
     n_sensors = int(latest_rec["n_sensors"])
     qc_flag = str(latest_rec["qc_flag"])
 
+    # Strict Data Freshness Policy: Suppress forecast if observation is older than 6 hours
+    now_utc = datetime.now(timezone.utc)
+    obs_age_hours = (now_utc - latest_rec["ts_utc"]).total_seconds() / 3600.0
+    if obs_age_hours > 6.0:
+        return None, row_id, 0, f"STALE_FEED ({round(obs_age_hours, 1)}h old)", []
+
     # Build feature matrix for inference
     df_matrix = build_feature_matrix(df_pm25, df_features)
     valid_features = df_matrix.dropna(subset=["pm25_lag_48"])

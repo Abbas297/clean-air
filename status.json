@@ -1,10 +1,10 @@
 {
-  "last_heartbeat_utc": "2026-10-20T22:04:11.270496+00:00",
-  "run_id": "run_20261020T2203Z",
+  "last_heartbeat_utc": "2026-10-20T22:25:50.083595+00:00",
+  "run_id": "run_20261020T2225Z",
   "run_status": "HEALTHY",
-  "duration_seconds": 35.77,
-  "manifest_rows_total": 22,
-  "quality_events_logged": 19,
+  "duration_seconds": 38.14,
+  "manifest_rows_total": 40,
+  "quality_events_logged": 27,
   "silver_files": {
     "sensors": "data\\silver\\silver_sensor_readings.parquet",
     "meteo": "data\\silver\\silver_cams_weather.parquet",
@@ -12,7 +12,7 @@
     "firms": "data\\silver\\silver_punjab_fires.parquet"
   },
   "gold_tables": {
-    "pm25_city_hourly": 56388,
+    "pm25_city_hourly": 56369,
     "features_hourly": 133440
   },
   "pipeline_version": "v2.0-prefect-orchestrated"

@@ -35,15 +35,40 @@ def fit_and_apply_calibration(
     df_embassy["ts_utc"] = pd.to_datetime(df_embassy["ts_utc"], utc=True)
 
     # Attach humidity from meteo if available
+    from src.dq.log import append_quality_log
+    quality_log_path = Path(config.get("paths", {}).get("quality_log", "data/gold/quality_log.parquet"))
+
     if not df_meteo.empty and "rh_2m" in df_meteo.columns:
         df_meteo["ts_utc"] = pd.to_datetime(df_meteo["ts_utc"], utc=True)
         rh_lookup = df_meteo[["city", "ts_utc", "rh_2m"]].drop_duplicates(subset=["city", "ts_utc"])
         df_sensors = df_sensors.merge(rh_lookup, on=["city", "ts_utc"], how="left")
-    
-    if "rh_2m" not in df_sensors.columns or df_sensors["rh_2m"].isna().all():
-        df_sensors["rh_2m"] = 65.0  # nominal default RH
-    else:
-        df_sensors["rh_2m"] = df_sensors["rh_2m"].fillna(65.0)
+
+    if "rh_2m" not in df_sensors.columns:
+        df_sensors["rh_2m"] = np.nan
+
+    n_missing_rh = int(df_sensors["rh_2m"].isna().sum())
+    if n_missing_rh > 0:
+        # Impute via temporal ffill/bfill within each city group, then city median
+        df_sensors["rh_2m"] = df_sensors.groupby("city")["rh_2m"].transform(lambda g: g.ffill().bfill())
+        if df_sensors["rh_2m"].isna().any():
+            city_rh_medians = df_meteo.groupby("city")["rh_2m"].median().to_dict() if not df_meteo.empty else {}
+            df_sensors["rh_2m"] = df_sensors.apply(
+                lambda r: city_rh_medians.get(r["city"], 65.0) if pd.isna(r["rh_2m"]) else r["rh_2m"],
+                axis=1,
+            )
+
+        append_quality_log(
+            run_id=f"cal_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%MZ')}",
+            gate="Gate1-Calibration",
+            check="humidity_continuity",
+            rule="impute_missing_humidity_from_city_meteo",
+            action="FIX",
+            reason=f"Imputed {n_missing_rh} sensor rows missing humidity using temporal interpolation and city meteo medians",
+            evidence={"missing_count": n_missing_rh, "method": "ffill_bfill_city_median"},
+            table="silver_sensor_calibrated",
+            rows_affected=n_missing_rh,
+            log_path=quality_log_path,
+        )
 
     # 1. Join on Train split: city and ts_utc
     train_cutoff = pd.to_datetime(train_end_date, utc=True)

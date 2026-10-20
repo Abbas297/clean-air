@@ -26,21 +26,38 @@ def export_state_bundle(
 
     for c in monitored_cities:
         curr_pm, row_id, n_sensors, qc_flag, rows = generate_forecast_for_city(c, db_path=db_path)
-        forecasts_payload[c] = {
-            "city": c.title(),
-            "monitored": True,
-            "latest_pm": curr_pm,
-            "row_id": row_id,
-            "n_sensors": n_sensors,
-            "qc_flag": qc_flag,
-            "forecast_table": rows,
-            "advisory_triggered": bool(curr_pm and curr_pm >= 55.5),
-        }
+        is_stale = qc_flag is not None and "STALE" in str(qc_flag)
+        if is_stale or curr_pm is None:
+            forecasts_payload[c] = {
+                "city": c.title(),
+                "monitored": False,
+                "stale": True,
+                "latest_pm": None,
+                "row_id": row_id,
+                "n_sensors": 0,
+                "qc_flag": qc_flag or "INACTIVE",
+                "forecast_table": [],
+                "advisory_triggered": False,
+                "notice": f"{c.title()} ground truth monitor has been inactive since March 2025 (U.S. Consulate halt); live ground truth is unavailable and 24h forecast is suppressed per freshness policy.",
+            }
+        else:
+            forecasts_payload[c] = {
+                "city": c.title(),
+                "monitored": True,
+                "stale": False,
+                "latest_pm": curr_pm,
+                "row_id": row_id,
+                "n_sensors": n_sensors,
+                "qc_flag": qc_flag,
+                "forecast_table": rows,
+                "advisory_triggered": bool(curr_pm and curr_pm >= 55.5),
+            }
 
     for c in unmonitored_cities:
         forecasts_payload[c] = {
             "city": c.title(),
             "monitored": False,
+            "stale": False,
             "latest_pm": None,
             "row_id": None,
             "n_sensors": 0,
@@ -52,7 +69,7 @@ def export_state_bundle(
                     "80% Conformal Band [p10, p90]": "[Suspended]",
                     "Baseline A (Persistence)": None,
                     "Baseline B (Seasonal-Hour)": None,
-                    "CAMS Hindcast": round(65.0 + h * 1.2, 1),
+                    "CAMS Hindcast": None,
                 }
                 for h in [6, 12, 24]
             ],

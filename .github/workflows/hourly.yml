@@ -1,9 +1,7 @@
-name: Saaf Hawa Hourly Pipeline Cron
+name: Saaf Hawa Pipeline (Manual Trigger)
 
 on:
-  schedule:
-    - cron: '15 * * * *'  # Runs every hour at minute 15
-  workflow_dispatch:      # Allows manual trigger
+  workflow_dispatch:  # Manual trigger only (prevents running on fresh checkout without local historical cache)
 
 jobs:
   run-pipeline:

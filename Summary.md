@@ -38,7 +38,9 @@ All evaluations were conducted strictly on held-out test splits (`ts >= 2025-07-
 
 ### 4. Primary Operational Limitations & Scientific Honesty
 1. **Calibrated Estimate Post-March 2025:** Following the shutdown of reference BAM monitors at U.S. diplomatic posts, ground-truth labels in the test period are reconstructed via humidity-aware Ridge calibration of community sensors (PAQI) rather than direct BAM instruments. Post-March 2025 ground truth is an operational estimate.
-2. **Unmonitored Districts:** In districts without physical monitors (e.g., Multan, Faisalabad), automated health advisories are strictly suspended per Hackathon Guidelines. Regional CAMS bounds are provided with explicit unmonitored warnings.
+2. **Weakest Subgroups Disclosed:** The granular error-by-group table reveals that the model's weakest performance occurs in **Lahore** (MAE 30.78 µg/m³, conformal coverage 77.8% vs nominal 80%) and during **Smog Season (Oct–Feb)** (MAE 33.27 µg/m³). Furthermore, during the **evening window (18:00–24:00 UTC)** at $+6\text{h}$, simple persistence marginally edges out the model (MAE 23.51 vs 24.00 µg/m³) due to localized, sudden traffic congestion bursts.
+3. **Karachi Inactivity & Staleness Suppression:** Because the U.S. Consulate BAM in Karachi went dark in March 2025 and lack active OpenAQ community feeds, Karachi is recognized as inactive; live forecasts and advisories are suppressed per the 6-hour data freshness policy.
+4. **Unmonitored Districts:** In districts without physical monitors (e.g., Multan, Faisalabad), automated health advisories are strictly suspended per Hackathon Guidelines. Forecast tables write null values rather than mathematical approximations.
 
 ---
 

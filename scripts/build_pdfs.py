@@ -71,7 +71,7 @@ def generate_summary_pdf(output_path: Path = Path("Summary.pdf")):
     elements.append(t)
     elements.append(Spacer(1, 6))
     elements.append(Paragraph(
-        "<i>*Baseline Invariance Note: Baseline B (Seasonal-Hour) MAE is ~23.6 ug/m3 across horizons because previous 7-day occurrences for target hour (t+h) are identical for h<=24h. Post-March 2025 ground truth is an operational calibrated estimate.</i>",
+        "<i>*Baseline Invariance & Weakest Groups: Baseline B (Seasonal-Hour) MAE is ~23.6 ug/m3 across horizons because previous 7-day occurrences for target hour (t+h) are identical for h<=24h. Weakest subgroup performance: Lahore (MAE 30.78, coverage 77.8%) and Smog Season (MAE 33.27). Post-March 2025 ground truth is an operational calibrated estimate. Karachi feed stopped transmitting in March 2025 and live forecasts are suppressed per data freshness policy.</i>",
         body_style
     ))
     elements.append(Spacer(1, 8))

@@ -35,6 +35,23 @@ def run_loop():
             except Exception as e:
                 print(f"[Export Error] {e}", flush=True)
 
+            # Auto commit and push state/ to update Streamlit Cloud live
+            try:
+                import subprocess
+                subprocess.run(["git", "add", "state/", "status.json", "prefect_runs.csv", "data/manifest.csv"], check=False)
+                commit_res = subprocess.run(
+                    ["git", "commit", "-m", f"chore(state): hourly heartbeat update [{start_utc.strftime('%Y%m%dT%H%MZ')}] [skip ci]"],
+                    capture_output=True,
+                    text=True,
+                )
+                if "nothing to commit" not in commit_res.stdout.lower() and "nothing to commit" not in commit_res.stderr.lower():
+                    subprocess.run(["git", "push", "origin", "main"], check=False)
+                    print("[Scheduler Git] Successfully pushed updated state to origin/main", flush=True)
+                else:
+                    print("[Scheduler Git] State unchanged, no commit needed.", flush=True)
+            except Exception as ge:
+                print(f"[Scheduler Git Notice] {ge}", flush=True)
+
         except Exception as e:
             print(f"[Scheduler Error] Cycle encountered exception: {e}", flush=True)
 

@@ -86,8 +86,8 @@ def fetch_latest(
     output_dir: Optional[Path] = None,
 ) -> Path:
     """
-    Fetches latest PM2.5 readings for Pakistani sensors from OpenAQ API v3
-    and writes raw data to Bronze Parquet.
+    Fetches latest PM2.5 readings for the declared Pakistani community sensors from OpenAQ API v3
+    and writes raw data to Bronze Parquet. Strictly identical sensor set as used in training.
     """
     now_utc = datetime.now(timezone.utc)
     ts_str = now_utc.strftime("%Y%m%dT%H%MZ")
@@ -105,53 +105,47 @@ def fetch_latest(
     records: List[Dict[str, Any]] = []
     licences_observed: List[str] = []
 
-    try:
-        url = f"{OPENAQ_V3_BASE}/locations"
-        params = {"iso": "PK", "parameters_id": 2, "limit": 100}
-        resp = requests.get(url, headers=headers, params=params, timeout=20)
-        
-        if resp.status_code == 200:
-            data = resp.json().get("results", [])
-            for loc in data:
-                loc_id = loc.get("id")
-                loc_name = loc.get("name")
-                loc_licences = loc.get("licenses") or []
-                lic_str = "; ".join([l.get("name", "Unknown") for l in loc_licences if isinstance(l, dict)]) if isinstance(loc_licences, list) else "Unknown"
-                if lic_str and lic_str not in licences_observed:
-                    licences_observed.append(lic_str)
+    for sensor_meta in COMMUNITY_SENSORS:
+        s_id = sensor_meta["sensor_id"]
+        c_key = sensor_meta["city"]
+        c_code = sensor_meta["city_code"]
+        lic = sensor_meta.get("licences", "CC BY 4.0")
+        if lic not in licences_observed:
+            licences_observed.append(lic)
 
-                coords = loc.get("coordinates") or {}
-                sensors = loc.get("sensors", [])
+        try:
+            url = f"{OPENAQ_V3_BASE}/sensors/{s_id}"
+            resp = requests.get(url, headers=headers, timeout=20)
+            if resp.status_code == 200:
+                data = resp.json().get("results", [])
+                if data:
+                    s_obj = data[0]
+                    latest = s_obj.get("latest") or {}
+                    ts = latest.get("datetime", {}).get("utc")
+                    val = latest.get("value")
+                    coords = latest.get("coordinates") or {}
+                    lat = coords.get("latitude") if coords.get("latitude") is not None else sensor_meta["latitude"]
+                    lon = coords.get("longitude") if coords.get("longitude") is not None else sensor_meta["longitude"]
 
-                for s in sensors:
-                    param = s.get("parameter", {})
-                    if param.get("name") == "pm25" or param.get("id") == 2:
+                    if ts and val is not None:
                         records.append({
-                            "location_id": loc_id,
-                            "location_name": loc_name,
-                            "sensor_id": s.get("id"),
-                            "latitude": coords.get("latitude"),
-                            "longitude": coords.get("longitude"),
-                            "datetime_last": loc.get("datetimeLast", {}).get("utc") if isinstance(loc.get("datetimeLast"), dict) else None,
-                            "licences": lic_str,
-                            "raw_sensor_meta": str(s),
+                            "sensor_id": f"s_{s_id}",
+                            "city": c_key,
+                            "city_code": c_code,
+                            "station_name": sensor_meta["location_name"],
+                            "latitude": lat,
+                            "longitude": lon,
+                            "ts_utc": ts,
+                            "pm25_raw": float(val),
+                            "licences": lic,
+                            "source": "OpenAQ-Community-Real",
                             "fetch_time_utc": fetch_time_iso,
                         })
-    except Exception as e:
-        print(f"[OpenAQ Latest] Fetch warning: {e}", flush=True)
+        except Exception as e:
+            print(f"[OpenAQ Latest] Sensor {s_id} ({c_key}) fetch notice: {e}", flush=True)
 
     if not records:
-        records.append({
-            "location_id": 0,
-            "location_name": "EMPTY_OR_UNAVAILABLE",
-            "sensor_id": 0,
-            "latitude": None,
-            "longitude": None,
-            "datetime_last": None,
-            "licences": "Unknown",
-            "raw_sensor_meta": "No sensors returned",
-            "fetch_time_utc": fetch_time_iso,
-        })
+        print("[OpenAQ Latest] No live records returned from API; preserving previous bronze state.", flush=True)
 
     df = pd.DataFrame(records)
     out_file = output_dir / f"bronze_openaq_{ts_str}.parquet"
@@ -163,7 +157,7 @@ def fetch_latest(
         source="OpenAQ",
         publisher="Pakistan Air Quality Initiative (PAQI) / Community via OpenAQ",
         url_or_doi="https://openaq.org",
-        query="iso=PK&parameters_id=2",
+        query="sensors/hours?limit=2",
         fetch_time_utc=fetch_time_iso,
         licence="; ".join(licences_observed) if licences_observed else "CC BY 4.0 / Community",
         manifest_path=manifest_path,
