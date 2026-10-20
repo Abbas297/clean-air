@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Data and artifacts (except manifest)
+data/bronze/*
+!data/bronze/.gitkeep
+data/silver/*
+!data/silver/.gitkeep
+data/gold/*
+!data/gold/.gitkeep
+data/quarantine/*
+!data/quarantine/.gitkeep
+*.parquet
+*.duckdb
+
+# Secrets
+.env
+*.env
+secrets.json
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Prefect
+.prefect/
+
+# Tests & caches
+.pytest_cache/
+.coverage
+htmlcov/

@@ -1,0 +1,9 @@
+{
+  "last_heartbeat_utc": "2026-10-20T16:09:59.610779+00:00",
+  "run_status": "HEALTHY",
+  "duration_seconds": 6.86,
+  "manifest_rows_total": 2,
+  "bronze_openaq_latest": "data\\bronze\\openaq\\bronze_openaq_20261020T1609Z.parquet",
+  "bronze_openmeteo_latest": "data\\bronze\\openmeteo\\bronze_openmeteo_20261020T1609Z.parquet",
+  "pipeline_version": "v2.0-heartbeat"
+}

@@ -1,0 +1,81 @@
+project:
+  name: "saaf-hawa-v2"
+  timezone: "Asia/Karachi"
+  storage_timezone: "UTC"
+
+cities:
+  lahore:
+    code: "LHE"
+    name: "Lahore"
+    latitude: 31.5204
+    longitude: 74.3587
+    is_monitored: true
+  islamabad:
+    code: "ISB"
+    name: "Islamabad"
+    latitude: 33.6844
+    longitude: 73.0479
+    is_monitored: true
+  karachi:
+    code: "KHI"
+    name: "Karachi"
+    latitude: 24.8607
+    longitude: 67.0011
+    is_monitored: true
+  peshawar:
+    code: "PEW"
+    name: "Peshawar"
+    latitude: 34.0151
+    longitude: 71.5249
+    is_monitored: true
+
+unvalidated_cities:
+  faisalabad:
+    code: "FSD"
+    name: "Faisalabad"
+    latitude: 31.4504
+    longitude: 73.1350
+    is_monitored: false
+  multan:
+    code: "MUX"
+    name: "Multan"
+    latitude: 30.1575
+    longitude: 71.5249
+    is_monitored: false
+
+firms_bounding_box:
+  min_lat: 28.0
+  max_lat: 34.0
+  min_lon: 70.0
+  max_lon: 77.0
+
+thresholds:
+  who_24h_guideline: 15.0
+  punjab_epd_standard: 35.0
+  us_epa_unhealthy_for_sensitive: 35.5
+  us_epa_unhealthy: 55.5
+  extreme_value_quarantine: 1000.0
+  extreme_value_adjudicate: 500.0
+  stuck_consecutive_hours: 6
+  max_feature_gap_linear_fill: 3
+  humidity_bias_rh_threshold: 90.0
+  humidity_bias_cams_ratio: 3.0
+  psi_drift_threshold: 0.25
+
+paths:
+  manifest: "data/manifest.csv"
+  bronze_openaq: "data/bronze/openaq"
+  bronze_openmeteo: "data/bronze/openmeteo"
+  bronze_firms: "data/bronze/firms"
+  bronze_airnow: "data/bronze/airnow"
+  silver: "data/silver"
+  gold_db: "data/gold/saaf_hawa.duckdb"
+  quarantine: "data/quarantine"
+  quality_log: "data/gold/quality_log.parquet"
+  status_json: "status.json"
+
+endpoints:
+  openaq_v3_base: "https://api.openaq.org/v3"
+  openmeteo_air_quality: "https://air-quality-api.open-meteo.com/v1/air-quality"
+  openmeteo_weather_archive: "https://archive-api.open-meteo.com/v1/archive"
+  nasa_firms_base: "https://firms.modaps.eosdis.nasa.gov/api/area/csv"

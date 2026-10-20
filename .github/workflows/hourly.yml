@@ -1,0 +1,42 @@
+name: Hourly Heartbeat Flow
+
+on:
+  schedule:
+    # Run at off-peak minute 7 of every hour (UTC) per MVP section 10
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run hourly flow
+        env:
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          PREFECT_API_KEY: ${{ secrets.PREFECT_API_KEY }}
+        run: |
+          python flows/hourly.py
+
+      - name: Commit manifest and status to state branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin state || git checkout -b state
+          git checkout state
+          git add data/manifest.csv status.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore(heartbeat): update manifest and status [skip ci]"
+          git push origin state || echo "Push skipped if remote branch not yet configured"
