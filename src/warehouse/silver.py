@@ -98,6 +98,13 @@ def build_silver_layer(
     firms_files = list(bronze_firms_dir.glob("*.parquet"))
     if firms_files:
         df_firms = pd.concat([pd.read_parquet(f) for f in firms_files], ignore_index=True)
+        # Each hourly download re-fetches the last 7 days, so the same detection appears in
+        # several Bronze files. Count every physical detection once.
+        n_before = len(df_firms)
+        df_firms = df_firms.drop_duplicates(
+            subset=["latitude", "longitude", "acq_date", "acq_time"], keep="last"
+        ).reset_index(drop=True)
+        print(f"[Silver] FIRMS de-duplication: {n_before} -> {len(df_firms)} detections")
         # Aggregate daily fire detections and total FRP
         df_firms["date"] = pd.to_datetime(df_firms["acq_date"]).dt.strftime("%Y-%m-%d")
         daily_fires = df_firms.groupby("date").agg(

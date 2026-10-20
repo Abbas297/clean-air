@@ -113,17 +113,33 @@ def fit_and_apply_calibration(
                 intercept = float(coeffs[0])
                 slope_pm = float(coeffs[1])
                 slope_rh = float(coeffs[2])
+            method = "ridge_fit_on_train_overlap"
         else:
-            # Standard physical low-cost optical sensor transfer function
-            # Corrects hygroscopic growth at high humidity: ~0.85 slope + humidity offset
-            slope_pm = 0.88
-            slope_rh = -0.05
-            intercept = 2.5
+            # No (or too little) overlap with the reference monitor in the Train window.
+            # We do NOT invent a correction: the sensor is used as published (identity)
+            # and every downstream table carries the label "uncalibrated".
+            slope_pm, slope_rh, intercept = 1.0, 0.0, 0.0
+            method = "identity_uncalibrated_no_reference_overlap"
+            append_quality_log(
+                run_id=f"cal_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%MZ')}",
+                gate="Gate1-Calibration",
+                check="reference_overlap",
+                rule="R09_NO_REFERENCE_OVERLAP",
+                action="FLAG",
+                reason=(f"{city_key}: only {len(city_train)} sensor/reference pairs in the Train window "
+                        "(need 30). Sensor values used as published; city labelled uncalibrated."),
+                evidence={"pairs_in_train": int(len(city_train)), "method": method},
+                table="silver_sensor_calibrated",
+                rows_affected=int(len(city_all)),
+                log_path=quality_log_path,
+            )
 
         model_meta["coefficients_by_city"][city_key] = {
             "slope_pm25": slope_pm,
             "slope_rh": slope_rh,
             "intercept": intercept,
+            "method": method,
+            "n_train_pairs": int(len(city_train)),
         }
 
         # Apply calibration
@@ -138,6 +154,27 @@ def fit_and_apply_calibration(
     df_calibrated = pd.concat(calibrated_dfs, ignore_index=True) if calibrated_dfs else df_sensors
     if "pm25_cal" not in df_calibrated.columns:
         df_calibrated["pm25_cal"] = df_calibrated["pm25_raw"]
+
+    # --- RQ1 evidence: how close is the (calibrated) sensor to the reference monitor
+    # on hours the calibration never saw (after the Train cutoff)?
+    report = {}
+    hold = df_calibrated[df_calibrated["ts_utc"] > train_cutoff].merge(
+        df_embassy[["city", "ts_utc", "pm25_reference"]], on=["city", "ts_utc"], how="inner"
+    ).dropna(subset=["pm25_raw", "pm25_cal", "pm25_reference"])
+    for city_key, g in hold.groupby("city"):
+        if len(g) < 30:
+            continue
+        ref = g["pm25_reference"].values
+        def _m(x):
+            err = x - ref
+            ss_res = float(np.sum(err ** 2)); ss_tot = float(np.sum((ref - ref.mean()) ** 2))
+            return {"mae": round(float(np.mean(np.abs(err))), 2),
+                    "bias": round(float(np.mean(err)), 2),
+                    "r2": round(1 - ss_res / ss_tot, 3) if ss_tot > 0 else None}
+        report[city_key] = {"n_holdout_pairs": int(len(g)),
+                            "raw_vs_reference": _m(g["pm25_raw"].values),
+                            "calibrated_vs_reference": _m(g["pm25_cal"].values)}
+    model_meta["holdout_vs_reference"] = report
 
     out_cal_parquet = silver_dir / "silver_sensor_calibrated.parquet"
     df_calibrated.to_parquet(out_cal_parquet, engine="pyarrow", index=False)

@@ -4,91 +4,105 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
 
+def _facts():
+    """Every number in the Summary is read from pipeline output, never typed by hand."""
+    import json
+    import pandas as pd
+    root = Path(".")
+    status_p = root / "state/status.json" if (root / "state/status.json").exists() else root / "status.json"
+    status = json.loads(status_p.read_text(encoding="utf-8"))
+    ev = pd.read_csv(root / "state/eval_summary.csv")
+    grp = pd.read_csv(root / "state/eval_by_group.csv")
+    f = {"status": status, "eval": ev, "group": grp}
+    f["gold_pm"] = status.get("gold_tables", {}).get("pm25_city_hourly", 0)
+    f["gold_feat"] = status.get("gold_tables", {}).get("features_hourly", 0)
+    fires = root / "data/silver/silver_punjab_fires.parquet"
+    f["fire_days"] = int(len(pd.read_parquet(fires))) if fires.exists() else 0
+    cal = root / "data/silver/calibration_model.json"
+    f["uncal_cities"] = []
+    if cal.exists():
+        meta = json.loads(cal.read_text(encoding="utf-8"))
+        f["uncal_cities"] = [c for c, v in meta.get("coefficients_by_city", {}).items()
+                             if str(v.get("method", "")).startswith("identity")]
+    sub = grp[grp["group_type"].isin(["city", "season"])]
+    w = sub.sort_values("model_mae", ascending=False).iloc[0]
+    f["weak"] = (w["group_value"], w["horizon"], float(w["model_mae"]), float(w["coverage_80"]))
+    f["worse"] = grp[(grp["beats_baselines"] == False) & (grp["group_type"] != "overall")]  # noqa: E712
+    return f
+
+
+def _summary_paragraphs(f):
+    ev = f["eval"]
+    cov = ev[ev["model"].str.contains("LightGBM")]["coverage_80"]
+    weak = f["weak"]
+    lim = []
+    lim.append(f"Fire signal: the FIRMS series in Silver covers {f['fire_days']} day(s); where history is missing the lagged fire features are 0, so any fire effect is not yet evidenced.")
+    if f["uncal_cities"]:
+        lim.append("Uncalibrated labels (no reference-monitor overlap in the training window): " + ", ".join(sorted(f["uncal_cities"])) + ".")
+    lim.append("Labels in the test period come from different sensors than in training (sensor change in May 2025), so test error includes a label-source shift.")
+    lim.append(f"Weakest group: {weak[0]} at {weak[1]} (MAE {weak[2]:.2f}, 80% coverage {weak[3]:.1f}%).")
+    if len(f["worse"]):
+        names = "; ".join(f"{r.group_value} {r.horizon}" for r in f["worse"].itertuples())
+        lim.append(f"Groups where the model does not beat both baselines: {names}.")
+    return {
+        "s1": ("1. Problem & Approach",
+               "Public reference-grade air quality data in Pakistani cities became unavailable after the U.S. embassy network stopped publishing to AirNow in 2025. "
+               "Saaf Hawa rebuilds ground truth from community sensors (calibrated to the embassy record where the two overlap), adds ECMWF CAMS, weather and NASA FIRMS fires, "
+               "and forecasts hourly PM2.5 at +6, +12 and +24 h with calibrated 80% intervals for district education and health officers in Punjab."),
+        "s2": ("2. Data & Quality",
+               f"Independent publishers: OpenAQ community sensors, U.S. AirNow embassy archive (not on the track list), ECMWF/Copernicus via Open-Meteo, NASA FIRMS. "
+               f"Gold holds {f['gold_pm']:,} city-hourly PM2.5 rows and {f['gold_feat']:,} feature rows. Every raw file has a SHA-256 row in manifest.csv. "
+               f"Gate 1 (schema, sentinels, stuck sensors, extreme-value peer check) and Gate 2 (freshness, drift) write each fix/fill/flag decision to quality_log."),
+        "s3": ("3. Results vs declared baselines (held-out test, 24 h embargo)", None),
+        "s4": ("4. Limitations (read these first)", "<br/>".join("• " + x for x in lim)),
+        "s5": ("5. Responsible AI",
+               "The Insight Agent takes numbers only from SQL on Gold tables, stores row IDs with each answer, answers \"I don't know\" when retrieval or data is missing, "
+               "points to Rescue 1122 / Health helpline 1033 for emergencies, and labels unvalidated cities. Outputs are information, not professional advice."),
+        "cov_range": (float(cov.min()), float(cov.max())),
+    }
+
+
 def generate_summary_pdf(output_path: Path = Path("Summary.pdf")):
-    doc = SimpleDocTemplate(
-        str(output_path),
-        pagesize=letter,
-        rightMargin=36,
-        leftMargin=36,
-        topMargin=36,
-        bottomMargin=36,
-    )
+    import re
+    f = _facts()
+    P = _summary_paragraphs(f)
+    doc = SimpleDocTemplate(str(output_path), pagesize=letter, rightMargin=36, leftMargin=36, topMargin=30, bottomMargin=30)
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle("TitleStyle", parent=styles["Heading1"], fontSize=18, leading=22, textColor=colors.HexColor("#1b365d"))
-    heading_style = ParagraphStyle("H2Style", parent=styles["Heading2"], fontSize=12, leading=16, textColor=colors.HexColor("#2b547e"))
-    body_style = ParagraphStyle("BodyStyle", parent=styles["Normal"], fontSize=9, leading=12)
-    bold_body = ParagraphStyle("BoldBody", parent=styles["Normal"], fontSize=9, leading=12, fontName="Helvetica-Bold")
+    title_style = ParagraphStyle("TitleStyle", parent=styles["Heading1"], fontSize=16, leading=19, textColor=colors.HexColor("#1b365d"))
+    heading_style = ParagraphStyle("H2Style", parent=styles["Heading2"], fontSize=11, leading=14, textColor=colors.HexColor("#2b547e"), spaceBefore=4, spaceAfter=2)
+    body_style = ParagraphStyle("BodyStyle", parent=styles["Normal"], fontSize=8.6, leading=11)
 
-    elements = []
+    el = [Paragraph("Saaf Hawa: 24-hour smog forecasting for Punjab after the loss of embassy monitors", title_style),
+          Paragraph("<b>Track:</b> Air quality | <b>Event:</b> HackInsight '26 | free and open-source stack", body_style)]
+    md = ["# Saaf Hawa: 24-hour smog forecasting for Punjab after the loss of embassy monitors", ""]
+    for k in ("s1", "s2"):
+        h, t = P[k]; el += [Paragraph(h, heading_style), Paragraph(t, body_style)]; md += [f"## {h}", t, ""]
 
-    # Header
-    elements.append(Paragraph("Saaf Hawa v2: Rebuilding Ground Truth & Smog Forecasting", title_style))
-    elements.append(Paragraph("<b>Track:</b> Air Quality | <b>Event:</b> HackInsight '26 | <b>Zero-Cost Open Source Stack</b>", body_style))
-    elements.append(Spacer(1, 10))
+    h, _ = P["s3"]; el.append(Paragraph(h, heading_style)); md += [f"## {h}", ""]
+    ev = f["eval"]; rows = [["Horizon", "A: Persistence MAE", "B: Seasonal-hour MAE", "LightGBM+CQR MAE", "80% coverage", "Beats A and B"]]
+    md += ["| " + " | ".join(rows[0]) + " |", "|" + "---|" * 6]
+    for hz in ["+6h", "+12h", "+24h"]:
+        a = ev[(ev.horizon == hz) & ev.model.str.contains("Persistence")].iloc[0]
+        b = ev[(ev.horizon == hz) & ev.model.str.contains("Seasonal")].iloc[0]
+        m = ev[(ev.horizon == hz) & ev.model.str.contains("LightGBM")].iloc[0]
+        ok = m.p50_mae < a.p50_mae and m.p50_mae < b.p50_mae
+        r = [hz, f"{a.p50_mae:.2f}", f"{b.p50_mae:.2f}", f"{m.p50_mae:.2f}", f"{m.coverage_80:.1f}%", "yes" if ok else "NO"]
+        rows.append(r); md.append("| " + " | ".join(r) + " |")
+    t = Table(rows, colWidths=[50, 95, 105, 95, 80, 80])
+    t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1b365d")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                           ("FONTSIZE", (0, 0), (-1, -1), 8), ("ALIGN", (0, 0), (-1, -1), "CENTER"), ("GRID", (0, 0), (-1, -1), 0.5, colors.grey)]))
+    el += [t, Spacer(1, 4)]
+    lo, hi = P["cov_range"]
+    note = (f"MAE in µg/m³ on identical test rows. Declared target for the 80% interval: 75-85% (observed {lo:.1f}-{hi:.1f}%). "
+            "Seasonal-hour is the same at every horizon because it uses the previous 7 days of the target hour. Numbers are read from state/eval_summary.csv.")
+    el.append(Paragraph("<i>" + note + "</i>", body_style)); md += ["", "*" + note + "*", ""]
 
-    # Executive Summary
-    elements.append(Paragraph("1. Executive Summary & Problem Statement", heading_style))
-    elements.append(Paragraph(
-        "In March 2025, public ambient air quality monitoring in Pakistan suffered a severe blind spot when U.S. State Department / EPA "
-        "embassy monitors in Lahore, Islamabad, Karachi, and Peshawar stopped transmitting data to AirNow. For district education officers, "
-        "health officials, and school heads across Punjab, this eliminated the only public reference-grade source of truth for high-stakes decisions "
-        "(school closures, morning assembly cancellations, mask mandates). "
-        "<b>Saaf Hawa v2</b> reconstructs ground truth from community sensor networks (PAQI) calibrated against the pre-halt embassy record, "
-        "and couples it with NASA FIRMS transboundary fires and ECMWF CAMS to provide 24h quantile forecasts with calibrated conformal uncertainty.",
-        body_style
-    ))
-    elements.append(Spacer(1, 8))
-
-    # Architecture & Data Rigour
-    elements.append(Paragraph("2. Multi-Publisher Data Stack & Volume", heading_style))
-    elements.append(Paragraph(
-        "• <b>Four Independent Publishers:</b> OpenAQ (PAQI), AirNow DoS archive (source not on track list), ECMWF/Copernicus (Open-Meteo), and NASA FIRMS.<br/>"
-        "• <b>Data Volume:</b> 56,388 city-hourly PM2.5 rows, 133,440 atmospheric features in DuckDB, backed by 28,652 AirNow historical calibration rows and 60,078 community sensor rows.<br/>"
-        "• <b>Data Contract:</b> Timestamps in UTC, deterministic row IDs ({CITY}-{YYYYMMDDTHHZ}), full SHA-256 provenance in manifest.csv.<br/>"
-        "• <b>Dual Quality Gates:</b> Pandera schema validation, sentinel conversion (-999 -> NULL), stuck-sensor detection (6h), and peer corroboration during extreme smog spikes (500-1000 ug/m3).",
-        body_style
-    ))
-    elements.append(Spacer(1, 8))
-
-    # Model Evaluation Table
-    elements.append(Paragraph("3. Scientific Evaluation vs Declared Baselines (Like-for-Like Held-out Test Split, 24h Embargo)", heading_style))
-    table_data = [
-        ["Forecast Horizon", "Baseline A (Persistence) MAE", "Baseline B (Seasonal-Hour) MAE", "Saaf Hawa LightGBM+CQR MAE", "80% Conformal Coverage"],
-        ["+6 Hours", "28.48 ug/m3", "23.62 ug/m3", "20.52 ug/m3", "82.8% (PASS)"],
-        ["+12 Hours", "31.77 ug/m3", "23.63 ug/m3", "21.03 ug/m3", "84.6% (PASS)"],
-        ["+24 Hours", "23.50 ug/m3", "23.65 ug/m3", "21.49 ug/m3", "84.9% (PASS)"],
-    ]
-    t = Table(table_data, colWidths=[90, 115, 120, 120, 95])
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1b365d")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("BACKGROUND", (3, 1), (3, -1), colors.HexColor("#e8f4f8")),
-    ]))
-    elements.append(t)
-    elements.append(Spacer(1, 6))
-    elements.append(Paragraph(
-        "<i>*Baseline Invariance & Weakest Groups: Baseline B (Seasonal-Hour) MAE is ~23.6 ug/m3 across horizons because previous 7-day occurrences for target hour (t+h) are identical for h<=24h. Weakest subgroup performance: Lahore (MAE 30.78, coverage 77.8%) and Smog Season (MAE 33.27). Post-March 2025 ground truth is an operational calibrated estimate. Karachi feed stopped transmitting in March 2025 and live forecasts are suppressed per data freshness policy.</i>",
-        body_style
-    ))
-    elements.append(Spacer(1, 8))
-
-    # Grounded RAG & Responsible AI
-    elements.append(Paragraph("4. Responsible AI & Insight Agent", heading_style))
-    elements.append(Paragraph(
-        "• <b>Number Guard:</b> Every numeric value in agent outputs is strictly verified against DuckDB Gold query results or official guidelines, preventing hallucinated numbers.<br/>"
-        "• <b>Data Provenance:</b> All forecast answers attach real database row IDs (e.g. LHE-20261020T1600Z).<br/>"
-        "• <b>Emergency Health Routing:</b> Directs acute symptoms to Punjab Emergency Rescue (1122) and Health Helpline (1033).<br/>"
-        "• <b>Bilingual Support:</b> Native Urdu templates for provincial school education administrators.<br/>"
-        "• <b>Unvalidated City Guard:</b> Multan & Faisalabad outputs are explicitly labeled with widened uncertainty bounds.",
-        body_style
-    ))
-
-    doc.build(elements)
-    print(f"Generated {output_path}")
+    for k in ("s4", "s5"):
+        h, tx = P[k]; el += [Paragraph(h, heading_style), Paragraph(tx, body_style)]
+        md += [f"## {h}", re.sub(r"<br/>", "\n", tx), ""]
+    doc.build(el)
+    Path("Summary.md").write_text("\n".join(md), encoding="utf-8")
+    print(f"Generated {output_path} and Summary.md from pipeline outputs")
 
 def generate_dataset_proposal_pdf(output_path: Path = Path("datasetproposal/datasetproposal.pdf")):
     doc = SimpleDocTemplate(
@@ -133,7 +147,7 @@ def generate_dataset_proposal_pdf(output_path: Path = Path("datasetproposal/data
     elements.append(Paragraph("3. Storage Contract, Provenance & Baselines", heading_style))
     elements.append(Paragraph(
         "• <b>Contract:</b> Timestamps stored in UTC. Missing target values remain NULL. Deterministic row IDs: {CITY}-{YYYYMMDDTHHZ}.<br/>"
-        "• <b>Volume:</b> 56,388 ground-truth city-hourly records, 28,652 embassy calibration rows, and 133,440 atmospheric feature rows, exceeding the 50,000 threshold.<br/>"
+        f"• <b>Volume:</b> {_facts()['gold_pm']:,} ground-truth city-hourly records and {_facts()['gold_feat']:,} atmospheric feature rows (read from status.json).<br/>"
         "• <b>Baselines:</b> Baseline A (Persistence at t) and Baseline B (Seasonal-Hour mean of target hour over past 7 days).<br/>"
         "• <b>Primary Limitation:</b> Post-March 2025 ground truth is an operational estimate calibrated from community sensors rather than direct BAM reference measurements.<br/>"
         "• <b>Integrity:</b> SHA-256 computed on ingest and audited in manifest.csv. 24-hour embargo enforced between splits.",

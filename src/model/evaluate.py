@@ -192,10 +192,11 @@ def run_evaluation_suite(
         # D. Granular Errors-by-Group Slices (City, Season, Diurnal, AQI Tier)
         # -------------------------------------------------------------
         merged["season"] = np.where(merged["ts_utc"].dt.month.isin([10, 11, 12, 1, 2]), "Smog (Oct-Feb)", "Non-Smog (Mar-Sep)")
-        hours = merged["ts_utc"].dt.hour
-        merged["diurnal"] = np.where(hours.between(6, 11), "Morning (06-12)",
-                            np.where(hours.between(12, 17), "Afternoon (12-18)",
-                            np.where(hours.between(18, 23), "Evening (18-24)", "Night (00-06)")))
+        # Hour of day in Pakistan Standard Time (UTC+5), the clock an officer actually uses.
+        hours = (merged["ts_utc"].dt.hour + 5) % 24
+        merged["diurnal"] = np.where(hours.between(6, 11), "Morning (06-12 PKT)",
+                            np.where(hours.between(12, 17), "Afternoon (12-18 PKT)",
+                            np.where(hours.between(18, 23), "Evening (18-24 PKT)", "Night (00-06 PKT)")))
         y_vals = merged[target_col]
         merged["aqi_tier"] = np.where(y_vals <= 55.4, "Moderate (<=55)",
                              np.where(y_vals <= 150.4, "Unhealthy (55-150)", "Very Unhealthy (>150)"))

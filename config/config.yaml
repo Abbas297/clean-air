@@ -75,7 +75,10 @@ paths:
   status_json: "status.json"
 
 api_keys:
-  openaq: "b0c41a9fb048c8f264d6702db60a954e67f5a566003ee7ab6da5b153607b1212"
+  # Never commit keys. Set OPENAQ_API_KEY and FIRMS_MAP_KEY as environment variables
+  # (see .env.example) or as GitHub / Hugging Face secrets.
+  openaq: ""
+  firms: ""
 
 endpoints:
   openaq_v3_base: "https://api.openaq.org/v3"

@@ -44,6 +44,10 @@ def write_manifest_row(
     manifest_file.parent.mkdir(parents=True, exist_ok=True)
 
     sha256_val = calculate_sha256(target_path)
+    try:
+        target_path = target_path.resolve().relative_to(Path.cwd().resolve())
+    except ValueError:
+        pass  # outside the repo: keep the path as given
     file_exists = manifest_file.exists() and manifest_file.stat().st_size > 0
 
     with open(manifest_file, mode="a", newline="", encoding="utf-8") as f:

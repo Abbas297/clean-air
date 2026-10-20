@@ -37,3 +37,10 @@ We specifically declare and verify the provenance and nature of every data sourc
 3. **Post-March 2025 Ground Truth:** Operationally estimated via humidity-aware Ridge calibration against the pre-halt embassy baseline; explicitly acknowledged as an estimate rather than primary reference measurement.
 4. **Atmospheric & Transboundary Feeds:** Physical meteorological reanalysis (ECMWF ERA5) and Copernicus atmospheric chemistry models (CAMS) via Open-Meteo, and physical satellite thermal anomaly detections from NASA VIIRS via FIRMS.
 5. **Evaluations:** 100% computed from actual trained LightGBM quantile models and Split-Conformal prediction on held-out test data with zero hardcoded or scaled constants.
+
+---
+
+## 4. Independent review (2026-10-21, ~03:30-04:30 PKT)
+| Tool | Task | Kept / changed | How checked |
+|---|---|---|---|
+| Claude Sonnet 5.5 (Anthropic) | Read-only audit of the repository against the HackInsight rules; patches to a copy | Kept: pipeline structure, models, DQ rules. Changed: FIRMS de-duplication in `silver.py`; identity (not invented) calibration fallback plus holdout-vs-reference report in `calibrate.py`; repo-relative manifest paths in `manifest.py`; PKT diurnal groups in `evaluate.py`; data-driven `build_pdfs.py`; new `scripts/backfill_firms.py`; API key removed from `config.yaml`; `DECLARATION_ADDENDUM.md` | pytest 15/15 after patches; Silver/calibration rebuilt offline from the team's own Bronze files; fire counts compared before/after (7,610 rows -> 1,522 unique); PDF page count checked. Live API calls (OpenAQ, FIRMS) were NOT run in this review. |

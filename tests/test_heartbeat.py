@@ -31,6 +31,14 @@ def test_manifest_integrity():
 
     for _, row in df.iterrows():
         p = Path(row["file"])
+        if not p.exists():
+            # Legacy rows were written with an absolute path on the author's machine.
+            # Map them to the repo-relative location; the SHA-256 check below still applies.
+            parts = Path(str(row["file"]).replace("\\", "/")).parts
+            for anchor in ("data", "src"):
+                if anchor in parts:
+                    p = Path(*parts[parts.index(anchor):])
+                    break
         assert p.exists(), f"File declared in manifest does not exist: {p}"
         real_sha256 = calculate_sha256(p)
         assert real_sha256 == row["sha256"], f"SHA-256 mismatch for {p}: declared {row['sha256']} != actual {real_sha256}"
