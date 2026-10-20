@@ -1,9 +1,15 @@
 {
-  "last_heartbeat_utc": "2026-10-20T16:09:59.610779+00:00",
+  "last_heartbeat_utc": "2026-10-20T16:26:34.977097+00:00",
+  "run_id": "run_20261020T1626Z",
   "run_status": "HEALTHY",
-  "duration_seconds": 6.86,
-  "manifest_rows_total": 2,
-  "bronze_openaq_latest": "data\\bronze\\openaq\\bronze_openaq_20261020T1609Z.parquet",
-  "bronze_openmeteo_latest": "data\\bronze\\openmeteo\\bronze_openmeteo_20261020T1609Z.parquet",
-  "pipeline_version": "v2.0-heartbeat"
+  "duration_seconds": 7.81,
+  "manifest_rows_total": 6,
+  "quality_events_logged": 0,
+  "silver_files": {
+    "sensors": "data\\silver\\silver_sensor_readings.parquet",
+    "meteo": "data\\silver\\silver_cams_weather.parquet",
+    "airnow": "data\\silver\\silver_embassy_reference.parquet",
+    "firms": "data\\silver\\silver_punjab_fires.parquet"
+  },
+  "pipeline_version": "v2.0-silver-ready"
 }
