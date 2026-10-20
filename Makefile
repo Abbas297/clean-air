@@ -31,7 +31,7 @@ eval:
 
 rag:
 	@echo "==> Testing Insight Agent & Grounded SQL Templates..."
-	python -c "print('RAG entrypoint.')"
+	pytest -v tests/test_rag.py
 
 app:
 	@echo "==> Starting Gradio Dashboard..."
