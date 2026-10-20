@@ -1,40 +1,40 @@
 group_type,group_value,horizon,model,n_samples,model_mae,persistence_mae,seasonal_mae,coverage_80,mean_band_width,beats_baselines
-overall,all,+6h,LightGBM Quantiles + CQR,24349,20.83,28.5,23.61,83.0,70.4,True
-city,islamabad,+6h,LightGBM Quantiles + CQR,5190,13.39,13.57,14.09,83.5,41.9,True
-city,lahore,+6h,LightGBM Quantiles + CQR,7976,30.83,51.15,38.96,77.3,101.7,True
-city,peshawar,+6h,LightGBM Quantiles + CQR,11183,17.16,19.27,17.08,86.9,61.3,False
-season,Non-Smog (Mar-Sep),+6h,LightGBM Quantiles + CQR,14984,12.7,16.02,14.21,83.3,44.5,True
-season,Smog (Oct-Feb),+6h,LightGBM Quantiles + CQR,9365,33.85,48.46,38.64,82.6,111.8,True
-diurnal,Afternoon (12-18 PKT),+6h,LightGBM Quantiles + CQR,6051,19.02,28.35,22.63,83.7,66.8,True
-diurnal,Evening (18-24 PKT),+6h,LightGBM Quantiles + CQR,6189,22.56,27.41,23.51,83.2,75.8,True
-diurnal,Morning (06-12 PKT),+6h,LightGBM Quantiles + CQR,6008,17.43,34.53,24.5,83.0,61.6,True
-diurnal,Night (00-06 PKT),+6h,LightGBM Quantiles + CQR,6101,24.24,23.8,23.8,82.3,77.1,False
-aqi_tier,Moderate (<=55),+6h,LightGBM Quantiles + CQR,14422,11.14,13.51,12.84,86.2,41.8,True
-aqi_tier,Unhealthy (55-150),+6h,LightGBM Quantiles + CQR,6515,26.76,39.47,30.32,80.1,88.3,True
-aqi_tier,Very Unhealthy (>150),+6h,LightGBM Quantiles + CQR,3412,50.51,70.86,56.3,74.9,157.2,True
-overall,all,+12h,LightGBM Quantiles + CQR,24331,21.14,31.77,23.62,84.5,74.6,True
-city,islamabad,+12h,LightGBM Quantiles + CQR,5184,12.12,16.55,14.1,87.6,46.6,True
-city,lahore,+12h,LightGBM Quantiles + CQR,7970,34.92,59.35,38.98,77.4,105.8,True
-city,peshawar,+12h,LightGBM Quantiles + CQR,11177,15.49,19.16,17.07,88.1,65.3,True
-season,Non-Smog (Mar-Sep),+12h,LightGBM Quantiles + CQR,14978,13.69,17.3,14.19,85.9,51.8,True
-season,Smog (Oct-Feb),+12h,LightGBM Quantiles + CQR,9353,33.05,54.94,38.71,82.3,111.1,True
-diurnal,Afternoon (12-18 PKT),+12h,LightGBM Quantiles + CQR,6042,22.82,35.45,23.49,83.5,78.1,True
-diurnal,Evening (18-24 PKT),+12h,LightGBM Quantiles + CQR,6178,23.82,29.22,24.23,83.7,81.7,True
-diurnal,Morning (06-12 PKT),+12h,LightGBM Quantiles + CQR,6008,18.96,29.13,22.52,86.5,72.4,True
-diurnal,Night (00-06 PKT),+12h,LightGBM Quantiles + CQR,6103,18.89,33.31,24.2,84.4,66.0,True
-aqi_tier,Moderate (<=55),+12h,LightGBM Quantiles + CQR,14412,10.84,14.48,12.84,88.9,48.3,True
-aqi_tier,Unhealthy (55-150),+12h,LightGBM Quantiles + CQR,6507,27.76,41.0,30.35,80.9,89.9,True
-aqi_tier,Very Unhealthy (>150),+12h,LightGBM Quantiles + CQR,3412,51.98,87.2,56.3,73.1,156.3,True
-overall,all,+24h,LightGBM Quantiles + CQR,24295,21.51,23.48,23.64,84.5,76.1,True
-city,islamabad,+24h,LightGBM Quantiles + CQR,5172,12.91,13.63,14.12,87.8,49.5,True
-city,lahore,+24h,LightGBM Quantiles + CQR,7958,35.57,39.16,39.04,77.4,106.0,True
-city,peshawar,+24h,LightGBM Quantiles + CQR,11165,15.49,16.86,17.07,88.1,67.2,True
-season,Non-Smog (Mar-Sep),+24h,LightGBM Quantiles + CQR,14966,13.96,15.99,14.2,85.2,52.5,True
-season,Smog (Oct-Feb),+24h,LightGBM Quantiles + CQR,9329,33.63,35.49,38.78,83.5,114.0,True
-diurnal,Afternoon (12-18 PKT),+24h,LightGBM Quantiles + CQR,6034,19.36,21.52,23.38,84.2,66.5,True
-diurnal,Evening (18-24 PKT),+24h,LightGBM Quantiles + CQR,6179,20.85,21.5,23.36,85.6,74.5,True
-diurnal,Morning (06-12 PKT),+24h,LightGBM Quantiles + CQR,5990,23.38,26.52,24.25,84.0,82.5,True
-diurnal,Night (00-06 PKT),+24h,LightGBM Quantiles + CQR,6092,22.5,24.43,23.58,84.3,81.0,True
-aqi_tier,Moderate (<=55),+24h,LightGBM Quantiles + CQR,14388,10.5,12.99,12.84,89.0,49.3,True
-aqi_tier,Unhealthy (55-150),+24h,LightGBM Quantiles + CQR,6495,29.09,30.77,30.4,80.4,93.8,True
-aqi_tier,Very Unhealthy (>150),+24h,LightGBM Quantiles + CQR,3412,53.54,53.84,56.3,73.4,155.5,True
+overall,all,+6h,LightGBM Quantiles + CQR,23547,22.1,30.35,25.08,81.9,72.2,True
+city,islamabad,+6h,LightGBM Quantiles + CQR,4861,13.58,13.76,14.33,84.8,43.6,True
+city,lahore,+6h,LightGBM Quantiles + CQR,7976,31.98,51.15,38.96,76.0,99.2,True
+city,peshawar,+6h,LightGBM Quantiles + CQR,10710,18.62,22.39,19.61,84.9,65.1,True
+season,Non-Smog (Mar-Sep),+6h,LightGBM Quantiles + CQR,14984,13.34,16.83,14.87,82.5,46.0,True
+season,Smog (Oct-Feb),+6h,LightGBM Quantiles + CQR,8563,37.43,54.02,42.93,80.8,118.1,True
+diurnal,Afternoon (12-18 PKT),+6h,LightGBM Quantiles + CQR,5848,20.8,30.56,24.09,82.6,68.7,True
+diurnal,Evening (18-24 PKT),+6h,LightGBM Quantiles + CQR,5989,23.59,29.16,24.91,82.4,78.5,True
+diurnal,Morning (06-12 PKT),+6h,LightGBM Quantiles + CQR,5802,18.45,36.61,26.13,82.0,62.8,True
+diurnal,Night (00-06 PKT),+6h,LightGBM Quantiles + CQR,5908,25.49,25.2,25.19,80.6,78.6,False
+aqi_tier,Moderate (<=55),+6h,LightGBM Quantiles + CQR,13428,11.72,14.44,13.6,85.3,43.0,True
+aqi_tier,Unhealthy (55-150),+6h,LightGBM Quantiles + CQR,6488,25.84,40.35,31.32,80.3,87.8,True
+aqi_tier,Very Unhealthy (>150),+6h,LightGBM Quantiles + CQR,3631,53.83,71.32,56.36,72.2,152.6,True
+overall,all,+12h,LightGBM Quantiles + CQR,23541,22.82,33.85,25.07,82.5,76.1,True
+city,islamabad,+12h,LightGBM Quantiles + CQR,4861,12.48,16.86,14.33,87.4,48.3,True
+city,lahore,+12h,LightGBM Quantiles + CQR,7970,36.38,59.35,38.98,74.7,102.9,True
+city,peshawar,+12h,LightGBM Quantiles + CQR,10710,17.42,22.59,19.6,86.2,68.8,True
+season,Non-Smog (Mar-Sep),+12h,LightGBM Quantiles + CQR,14978,14.35,18.33,14.85,84.7,53.1,True
+season,Smog (Oct-Feb),+12h,LightGBM Quantiles + CQR,8563,37.65,61.0,42.96,78.8,116.4,True
+diurnal,Afternoon (12-18 PKT),+12h,LightGBM Quantiles + CQR,5843,25.18,37.84,24.9,81.7,81.0,False
+diurnal,Evening (18-24 PKT),+12h,LightGBM Quantiles + CQR,5986,25.6,31.01,25.61,82.2,83.6,True
+diurnal,Morning (06-12 PKT),+12h,LightGBM Quantiles + CQR,5802,20.24,31.05,24.01,83.8,72.8,True
+diurnal,Night (00-06 PKT),+12h,LightGBM Quantiles + CQR,5910,20.21,35.53,25.75,82.5,66.9,True
+aqi_tier,Moderate (<=55),+12h,LightGBM Quantiles + CQR,13430,11.44,15.76,13.59,87.6,49.4,True
+aqi_tier,Unhealthy (55-150),+12h,LightGBM Quantiles + CQR,6480,27.82,41.92,31.35,80.7,90.1,True
+aqi_tier,Very Unhealthy (>150),+12h,LightGBM Quantiles + CQR,3631,56.02,86.33,56.36,67.3,150.0,True
+overall,all,+24h,LightGBM Quantiles + CQR,23529,23.18,24.88,25.08,83.3,76.4,True
+city,islamabad,+24h,LightGBM Quantiles + CQR,4861,13.09,13.8,14.34,88.4,50.3,True
+city,lahore,+24h,LightGBM Quantiles + CQR,7958,37.12,39.16,39.04,75.1,102.9,True
+city,peshawar,+24h,LightGBM Quantiles + CQR,10710,17.39,19.31,19.58,87.1,68.5,True
+season,Non-Smog (Mar-Sep),+24h,LightGBM Quantiles + CQR,14966,14.77,16.69,14.86,85.5,53.0,True
+season,Smog (Oct-Feb),+24h,LightGBM Quantiles + CQR,8563,37.87,39.2,42.94,79.4,117.2,True
+diurnal,Afternoon (12-18 PKT),+24h,LightGBM Quantiles + CQR,5843,20.59,22.88,24.88,83.5,68.1,True
+diurnal,Evening (18-24 PKT),+24h,LightGBM Quantiles + CQR,5987,22.35,22.76,24.8,83.6,74.2,True
+diurnal,Morning (06-12 PKT),+24h,LightGBM Quantiles + CQR,5796,25.3,28.07,25.68,82.7,82.2,True
+diurnal,Night (00-06 PKT),+24h,LightGBM Quantiles + CQR,5903,24.5,25.89,24.98,83.3,81.0,True
+aqi_tier,Moderate (<=55),+24h,LightGBM Quantiles + CQR,13428,10.89,13.82,13.58,89.8,49.5,True
+aqi_tier,Unhealthy (55-150),+24h,LightGBM Quantiles + CQR,6470,30.54,31.24,31.39,78.5,92.2,True
+aqi_tier,Very Unhealthy (>150),+24h,LightGBM Quantiles + CQR,3631,55.49,54.46,56.36,67.9,147.7,False

@@ -36,14 +36,18 @@ def _summary_paragraphs(f):
     cov = ev[ev["model"].str.contains("LightGBM")]["coverage_80"]
     weak = f["weak"]
     lim = []
-    lim.append(f"Fire signal: the FIRMS series in Silver covers {f['fire_days']} day(s); where history is missing the lagged fire features are 0, so any fire effect is not yet evidenced.")
+    if f["fire_days"] >= 365:
+        lim.append(f"Fire signal: the FIRMS series in Silver covers {f['fire_days']} days (Jan 2023 - Oct 2026), backfilling multi-year transboundary fire counts and FRP lags.")
+    else:
+        lim.append(f"Fire signal: the FIRMS series in Silver covers {f['fire_days']} day(s); where history is missing the lagged fire features are 0, so any fire effect is not yet evidenced.")
     if f["uncal_cities"]:
         lim.append("Uncalibrated labels (no reference-monitor overlap in the training window): " + ", ".join(sorted(f["uncal_cities"])) + ".")
     lim.append("Labels in the test period come from different sensors than in training (sensor change in May 2025), so test error includes a label-source shift.")
     lim.append(f"Weakest group: {weak[0]} at {weak[1]} (MAE {weak[2]:.2f}, 80% coverage {weak[3]:.1f}%).")
     if len(f["worse"]):
         names = "; ".join(f"{r.group_value} {r.horizon}" for r in f["worse"].itertuples())
-        lim.append(f"Groups where the model does not beat both baselines: {names}.")
+        lim.append(f"Subgroups trailing baselines: {names} (e.g. Night +6h trails persistence 25.49 vs 25.20; Afternoon +12h trails seasonal 25.18 vs 24.90).")
+    lim.append("Coverage drops in critical slices: Lahore achieves 74.7-76.0% (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% (MAE 53.83).")
     return {
         "s1": ("1. Problem & Approach",
                "Public reference-grade air quality data in Pakistani cities became unavailable after the U.S. embassy network stopped publishing to AirNow in 2025. "

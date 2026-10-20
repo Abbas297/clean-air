@@ -10,17 +10,19 @@ Independent publishers: OpenAQ community sensors, U.S. AirNow embassy archive (n
 
 | Horizon | A: Persistence MAE | B: Seasonal-hour MAE | LightGBM+CQR MAE | 80% coverage | Beats A and B |
 |---|---|---|---|---|---|
-| +6h | 28.50 | 23.61 | 20.83 | 83.0% | yes |
-| +12h | 31.77 | 23.62 | 21.14 | 84.5% | yes |
-| +24h | 23.48 | 23.64 | 21.51 | 84.5% | yes |
+| +6h | 30.35 | 25.08 | 22.10 | 81.9% | yes |
+| +12h | 33.85 | 25.07 | 22.82 | 82.5% | yes |
+| +24h | 24.88 | 25.08 | 23.18 | 83.3% | yes |
 
-*MAE in µg/m³ on identical test rows. Declared target for the 80% interval: 75-85% (observed 83.0-84.5%). Seasonal-hour is the same at every horizon because it uses the previous 7 days of the target hour. Numbers are read from state/eval_summary.csv.*
+*MAE in µg/m³ on identical test rows. Declared target for the 80% interval: 75-85% (observed 81.9-83.3%). Seasonal-hour is the same at every horizon because it uses the previous 7 days of the target hour. Numbers are read from state/eval_summary.csv.*
 
 ## 4. Limitations (read these first)
-• Fire signal: the FIRMS series in Silver covers 8 day(s); where history is missing the lagged fire features are 0, so any fire effect is not yet evidenced.
+• Fire signal: the FIRMS series in Silver covers 1321 days (Jan 2023 - Oct 2026), backfilling multi-year transboundary fire counts and FRP lags.
+• Uncalibrated labels (no reference-monitor overlap in the training window): karachi, peshawar.
 • Labels in the test period come from different sensors than in training (sensor change in May 2025), so test error includes a label-source shift.
-• Weakest group: lahore at +24h (MAE 35.57, 80% coverage 77.4%).
-• Groups where the model does not beat both baselines: peshawar +6h; Night (00-06 PKT) +6h.
+• Weakest group: Smog (Oct-Feb) at +24h (MAE 37.87, 80% coverage 79.4%).
+• Subgroups trailing baselines: Night (00-06 PKT) +6h; Afternoon (12-18 PKT) +12h; Very Unhealthy (>150) +24h (e.g. Night +6h trails persistence 25.49 vs 25.20; Afternoon +12h trails seasonal 25.18 vs 24.90).
+• Coverage drops in critical slices: Lahore achieves 74.7-76.0% (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% (MAE 53.83).
 
 ## 5. Responsible AI
 The Insight Agent takes numbers only from SQL on Gold tables, stores row IDs with each answer, answers "I don't know" when retrieval or data is missing, points to Rescue 1122 / Health helpline 1033 for emergencies, and labels unvalidated cities. Outputs are information, not professional advice.

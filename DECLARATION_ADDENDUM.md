@@ -11,3 +11,9 @@
 7. **Declared but not evaluated.** Success criterion 4 (advisory recall/precision vs the "current PM2.5 ≥ 55.5" rule) and the humidity-band and sensor-count group tables are not produced by the current evaluation code. They are reported as not done, not as passed.
 8. **Test set use.** The evaluation code was corrected three times after test scores were first seen (commits at 02:48, 03:11, 03:26 PKT on 21 Oct) and the diurnal groups were moved from UTC to PKT afterwards. Final numbers should come from one last run, with no further tuning.
 9. **Diurnal groups** are now in PKT (UTC+5). Earlier tables used UTC hours labelled as time of day.
+10. **Test split upper bound.** Declared test end is 2026-09-30. `evaluate.py` initially evaluated all rows with `ts_utc >= test_start` without bounding at `test_end`, which inadvertently allowed new hourly ingestion rows to drift into the test evaluation. This was corrected to enforce strict `(ts_utc >= test_start) & (ts_utc <= test_end)`.
+11. **Subgroup performance & weak spots (disclosed plainly):**
+   - **Night at +6h (00–06 PKT):** The model (MAE 25.49) is slightly worse than persistence (25.20) and seasonal (25.19).
+   - **Afternoon at +12h (12–18 PKT):** The model (MAE 25.18) is slightly worse than the seasonal baseline (24.90).
+   - **Lahore interval coverage:** 76.0% at +6h and 74.7% at +12h, falling short of the nominal 80% target.
+   - **Very Unhealthy tier (>150 µg/m³):** 80% interval coverage drops to 72.2% at +6h, with an MAE of 53.83 µg/m³. Operational decision-makers (DEAs) must be aware that interval uncertainty is under-covered during acute smog peaks.

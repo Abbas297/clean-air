@@ -64,9 +64,10 @@ def run_evaluation_suite(
     val_start = pd.to_datetime("2024-07-02T00:00:00Z", utc=True)
     val_end = pd.to_datetime("2025-06-30T23:59:59Z", utc=True)
     test_start = pd.to_datetime("2025-07-02T00:00:00Z", utc=True)
+    test_end = pd.to_datetime("2026-09-30T23:59:59Z", utc=True)
 
     val_mask = (df_matrix["ts_utc"] >= val_start) & (df_matrix["ts_utc"] <= val_end)
-    test_mask = (df_matrix["ts_utc"] >= test_start)
+    test_mask = (df_matrix["ts_utc"] >= test_start) & (df_matrix["ts_utc"] <= test_end)
 
     df_val = df_matrix[val_mask]
     df_test = df_matrix[test_mask]
