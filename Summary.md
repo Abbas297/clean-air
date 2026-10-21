@@ -4,7 +4,7 @@
 Public reference-grade air quality data in Pakistani cities became unavailable after the U.S. embassy network stopped publishing to AirNow in 2025. Saaf Hawa rebuilds ground truth from community sensors (calibrated to the embassy record where the two overlap), adds ECMWF CAMS, weather and NASA FIRMS fires, and forecasts hourly PM2.5 at +6, +12 and +24 h with calibrated 80% intervals for district education and health officers in Punjab.
 
 ## 2. Data & Quality
-Independent publishers: OpenAQ community sensors, U.S. AirNow embassy archive (not on the track list), ECMWF/Copernicus via Open-Meteo, NASA FIRMS. Gold holds 56,369 city-hourly PM2.5 rows and 133,440 feature rows. Every raw file has a SHA-256 row in manifest.csv. Gate 1 (schema, sentinels, stuck sensors, extreme-value peer check) and Gate 2 (freshness, drift) write each fix/fill/flag decision to quality_log.
+Independent publishers: OpenAQ community sensors, U.S. AirNow embassy archive (not on the track list), ECMWF/Copernicus via Open-Meteo, NASA FIRMS. Gold holds 56,373 city-hourly PM2.5 rows and 133,536 feature rows. Every raw file has a SHA-256 row in manifest.csv. Gate 1 (schema, sentinels, stuck sensors, extreme-value peer check) and Gate 2 (freshness, drift) write each fix/fill/flag decision to quality_log.
 
 ## 3. Results vs declared baselines (held-out test, 24 h embargo)
 
@@ -25,7 +25,7 @@ Independent publishers: OpenAQ community sensors, U.S. AirNow embassy archive (n
 • Coverage drops in critical slices: Lahore achieves 74.7-76.0% (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% (MAE 53.83).
 • Peshawar transfer: Peshawar has 0 training hours and represents 45.5% of test rows (10,710 of 23,547); the result is largely an out-of-distribution transfer to an unseen city.
 • Partial circularity: Islamabad calibration uses series s_1343270 which matches the embassy monitor in ~75% of overlap hours; treat its calibration R² as not independent evidence.
-• Run history timing: The hourly pipeline history starts at 02:35 AM PKT due to late scheduler activation; 42 missing fire dates across 2023–2026 are treated as 0 fires.
+• Run history: 11 runs (1 not Completed) from 2026-10-21 02:35 AM PKT to 2026-10-21 09:59 AM PKT; longest gap 4.66 h between unyielding-beluga and rough-snake; 42 missing fire dates treated as 0 fires (cause not established).
 
 ## 5. Responsible AI
 The Insight Agent takes numbers only from SQL on Gold tables, stores row IDs with each answer, answers "I don't know" when retrieval or data is missing, points to Rescue 1122 / Health helpline 1033 for emergencies, and labels unvalidated cities. Outputs are information, not professional advice.

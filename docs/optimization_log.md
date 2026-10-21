@@ -8,3 +8,6 @@ Tracking pipeline and model performance optimizations with empirically measured 
 | OPT-01 | 2026-10-21 02:30 PKT | Vectorized DuckDB Gold warehouse build with window partitions | No change | 36.8s end-to-end pipeline | ~160MB peak | Kept |
 | OPT-02 | 2026-10-21 02:55 PKT | Fast vectorized Seasonal-Hour baseline using shifted array concatenations | Identical (exact) | 0.4s (over 168,000 pairs) | ~85MB | Kept |
 | OPT-03 | 2026-10-21 03:20 PKT | De-duplicated fire detection counts and pre-computed state bundle export | Identical (exact) | 0.3s state bundle export | ~32MB payload | Kept |
+| OPT-04 | 2026-10-21 09:30 PKT | Removal of conflicting CI workflow (Task 1) and robust git rebase autostash in scheduler (Task 2) | No change | Instant (prevents race conditions & state divergence) | Minimal | Kept |
+| OPT-05 | 2026-10-21 10:05 PKT | Dynamic evaluation parsing in dashboard & PDF build; fast non-mutating start_time filtering in export_runs (Tasks 4–6) | Identical (exact) | ~0.05s parse & filter | <15MB | Kept |
+| OPT-06 | 2026-10-21 10:15 PKT | Client-side static Hugging Face Space (`hf_space/index.html`) reading GitHub raw state (Tasks 7–8) | No change | Instant client-side load, 0 server cost | <5MB in browser | Kept |

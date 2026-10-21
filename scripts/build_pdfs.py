@@ -28,6 +28,39 @@ def _facts():
     w = sub.sort_values("model_mae", ascending=False).iloc[0]
     f["weak"] = (w["group_value"], w["horizon"], float(w["model_mae"]), float(w["coverage_80"]))
     f["worse"] = grp[(grp["beats_baselines"] == False) & (grp["group_type"] != "overall")]  # noqa: E712
+
+    runs_p = root / "state/prefect_runs.csv" if (root / "state/prefect_runs.csv").exists() else root / "prefect_runs.csv"
+    if runs_p.exists():
+        try:
+            rdf = pd.read_csv(runs_p)
+            n_runs = len(rdf)
+            n_not_completed = int((rdf["state"] != "Completed").sum()) if "state" in rdf.columns else 0
+            if "start_time" in rdf.columns and len(rdf) > 0:
+                rdf["start_dt"] = pd.to_datetime(rdf["start_time"], utc=True)
+                rdf_sorted = rdf.sort_values("start_dt").reset_index(drop=True)
+                first_pkt = rdf_sorted.iloc[0]["start_dt"].tz_convert("Asia/Karachi").strftime("%Y-%m-%d %I:%M %p PKT")
+                last_pkt = rdf_sorted.iloc[-1]["start_dt"].tz_convert("Asia/Karachi").strftime("%Y-%m-%d %I:%M %p PKT")
+                if len(rdf_sorted) > 1:
+                    gaps = rdf_sorted["start_dt"].diff().dt.total_seconds() / 3600.0
+                    max_idx = gaps.idxmax()
+                    max_gap = float(gaps.loc[max_idx])
+                    run_before = str(rdf_sorted.loc[max_idx - 1, "name"])
+                    run_after = str(rdf_sorted.loc[max_idx, "name"])
+                else:
+                    max_gap = 0.0
+                    run_before, run_after = "n/a", "n/a"
+                f["runs_info"] = {
+                    "n_runs": n_runs,
+                    "n_not_completed": n_not_completed,
+                    "first_pkt": first_pkt,
+                    "last_pkt": last_pkt,
+                    "max_gap": max_gap,
+                    "run_before": run_before,
+                    "run_after": run_after,
+                }
+        except Exception as e:
+            print(f"[build_pdfs] runs_info note: {e}")
+
     return f
 
 
@@ -50,7 +83,11 @@ def _summary_paragraphs(f):
     lim.append("Coverage drops in critical slices: Lahore achieves 74.7-76.0% (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% (MAE 53.83).")
     lim.append("Peshawar transfer: Peshawar has 0 training hours and represents 45.5% of test rows (10,710 of 23,547); the result is largely an out-of-distribution transfer to an unseen city.")
     lim.append("Partial circularity: Islamabad calibration uses series s_1343270 which matches the embassy monitor in ~75% of overlap hours; treat its calibration R² as not independent evidence.")
-    lim.append("Run history timing: The hourly pipeline history starts at 02:35 AM PKT due to late scheduler activation; 42 missing fire dates across 2023–2026 are treated as 0 fires.")
+    if "runs_info" in f:
+        ri = f["runs_info"]
+        lim.append(f"Run history: {ri['n_runs']} runs ({ri['n_not_completed']} not Completed) from {ri['first_pkt']} to {ri['last_pkt']}; longest gap {ri['max_gap']:.2f} h between {ri['run_before']} and {ri['run_after']}; 42 missing fire dates treated as 0 fires (cause not established).")
+    else:
+        lim.append("Run history timing: The hourly pipeline history starts at 02:35 AM PKT due to late scheduler activation; 42 missing fire dates across 2023–2026 are treated as 0 fires.")
     return {
         "s1": ("1. Problem & Approach",
                "Public reference-grade air quality data in Pakistani cities became unavailable after the U.S. embassy network stopped publishing to AirNow in 2025. "

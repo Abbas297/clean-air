@@ -105,11 +105,45 @@ def get_evidence_data():
     else:
         cov_text = "N/A"
 
+    # Compute dynamic subgroup weak spots from state/eval_by_group.csv
+    ws = {
+        "night_m": "n/a", "night_p": "n/a",
+        "aft_m": "n/a", "aft_s": "n/a",
+        "lhe_cov_min": "n/a", "lhe_cov_max": "n/a",
+        "vu_cov": "n/a"
+    }
+    if EVAL_GROUP_FILE.exists():
+        try:
+            dg = pd.read_csv(EVAL_GROUP_FILE) if EVAL_GROUP_FILE.suffix == ".csv" else pd.read_parquet(EVAL_GROUP_FILE)
+            rn = dg[(dg["group_type"] == "diurnal") & (dg["group_value"].str.contains("Night", case=False, na=False)) & (dg["horizon"] == "+6h")]
+            if not rn.empty:
+                ws["night_m"] = f"{float(rn.iloc[0]['model_mae']):.2f}"
+                ws["night_p"] = f"{float(rn.iloc[0]['persistence_mae']):.2f}"
+
+            ra = dg[(dg["group_type"] == "diurnal") & (dg["group_value"].str.contains("Afternoon", case=False, na=False)) & (dg["horizon"] == "+12h")]
+            if not ra.empty:
+                ws["aft_m"] = f"{float(ra.iloc[0]['model_mae']):.2f}"
+                ws["aft_s"] = f"{float(ra.iloc[0]['seasonal_mae']):.2f}"
+
+            rl = dg[(dg["group_type"] == "city") & (dg["group_value"].str.lower() == "lahore")]
+            if not rl.empty:
+                ws["lhe_cov_min"] = f"{float(rl['coverage_80'].min()):.1f}"
+                ws["lhe_cov_max"] = f"{float(rl['coverage_80'].max()):.1f}"
+
+            rv = dg[(dg["group_type"] == "aqi_tier") & (dg["group_value"].str.contains("Very Unhealthy", case=False, na=False)) & (dg["horizon"] == "+6h")]
+            if not rv.empty:
+                ws["vu_cov"] = f"{float(rv.iloc[0]['coverage_80']):.1f}"
+        except Exception:
+            pass
+
     evidence_text = (
         "### Declared Success Criteria Verification (Real Held-Out Test Evaluation):\n"
         "1. **Baselines Beaten:** LightGBM Quantile Forecaster strictly outperforms Baseline A (Persistence) and Baseline B (Seasonal-Hour) across +6h, +12h, and +24h on like-for-like joined test data.\n"
         f"2. **Conformal Coverage:** Empirical 80% coverage rate is {cov_text}, conforming within the declared 75% - 85% pooled range.\n"
-        "3. **Embargo Integrity:** Checked by automated test asserting a strict 24-hour embargo between train, validation, and test splits."
+        "3. **Embargo Integrity:** Checked by automated test asserting a strict 24-hour embargo between train, validation, and test splits.\n"
+        f"4. **Subgroup Weak Spots (from eval_by_group):** Night +6h MAE ({ws['night_m']} vs {ws['night_p']} persistence); "
+        f"Afternoon +12h MAE ({ws['aft_m']} vs {ws['aft_s']} seasonal); Lahore coverage {ws['lhe_cov_min']}% - {ws['lhe_cov_max']}%; "
+        f"Very Unhealthy tier (+6h) coverage {ws['vu_cov']}%."
     )
     df_display = df_eval.copy()
     mask_b = df_display["model"].str.contains("Baseline", na=False)

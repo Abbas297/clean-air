@@ -340,16 +340,47 @@ with tab3:
         cov_min = float(model_rows["coverage_80"].min()) if not model_rows.empty else 0.0
         cov_max = float(model_rows["coverage_80"].max()) if not model_rows.empty else 0.0
 
+        # Compute dynamic subgroup weak spots from state/eval_by_group.csv
+        ws = {
+            "night_m": "n/a", "night_p": "n/a",
+            "aft_m": "n/a", "aft_s": "n/a",
+            "lhe_cov_min": "n/a", "lhe_cov_max": "n/a",
+            "vu_cov": "n/a"
+        }
+        if EVAL_GROUP_FILE.exists():
+            try:
+                dg = pd.read_csv(EVAL_GROUP_FILE) if EVAL_GROUP_FILE.suffix == ".csv" else pd.read_parquet(EVAL_GROUP_FILE)
+                rn = dg[(dg["group_type"] == "diurnal") & (dg["group_value"].str.contains("Night", case=False, na=False)) & (dg["horizon"] == "+6h")]
+                if not rn.empty:
+                    ws["night_m"] = f"{float(rn.iloc[0]['model_mae']):.2f}"
+                    ws["night_p"] = f"{float(rn.iloc[0]['persistence_mae']):.2f}"
+
+                ra = dg[(dg["group_type"] == "diurnal") & (dg["group_value"].str.contains("Afternoon", case=False, na=False)) & (dg["horizon"] == "+12h")]
+                if not ra.empty:
+                    ws["aft_m"] = f"{float(ra.iloc[0]['model_mae']):.2f}"
+                    ws["aft_s"] = f"{float(ra.iloc[0]['seasonal_mae']):.2f}"
+
+                rl = dg[(dg["group_type"] == "city") & (dg["group_value"].str.lower() == "lahore")]
+                if not rl.empty:
+                    ws["lhe_cov_min"] = f"{float(rl['coverage_80'].min()):.1f}"
+                    ws["lhe_cov_max"] = f"{float(rl['coverage_80'].max()):.1f}"
+
+                rv = dg[(dg["group_type"] == "aqi_tier") & (dg["group_value"].str.contains("Very Unhealthy", case=False, na=False)) & (dg["horizon"] == "+6h")]
+                if not rv.empty:
+                    ws["vu_cov"] = f"{float(rv.iloc[0]['coverage_80']):.1f}"
+            except Exception:
+                pass
+
         st.markdown(f"""
         ### Declared Success Criteria Verification (Real Held-Out Test Evaluation):
         1. **Baselines Beaten:** LightGBM Quantile Forecaster strictly outperforms Baseline A (Persistence) and Baseline B (Seasonal-Hour) across $+6\\text{{h}}, +12\\text{{h}}, +24\\text{{h}}$ on like-for-like joined test rows.
         2. **Conformal Coverage:** Empirical 80% coverage rate is **{cov_min:.1f}% - {cov_max:.1f}%**, conforming strictly within the declared $75\\% - 85\\%$ pooled coverage range.
         3. **Embargo Separation:** Temporal integrity verified by automated tests confirming a strict 24-hour embargo gap between train cutoff and test start.
-        4. **Subgroup Weak Spots (Disclosed Plainly):** 
-           - **Night +6h (00-06 PKT):** Model MAE (25.49 µg/m³) marginally trails persistence (25.20 µg/m³).
-           - **Afternoon +12h (12-18 PKT):** Model MAE (25.18 µg/m³) marginally trails seasonal (24.90 µg/m³).
-           - **Lahore Coverage:** Observes 74.7% - 76.0%, falling below the nominal 80% target.
-           - **Peak Episodes (Very Unhealthy, >150 µg/m³):** Coverage drops to 72.2% (+6h), which is crucial context for emergency health/school advisories.
+        4. **Subgroup Weak Spots (Disclosed Plainly, from eval_by_group):** 
+           - **Night +6h (00-06 PKT):** Model MAE ({ws['night_m']} µg/m³) marginally trails persistence ({ws['night_p']} µg/m³).
+           - **Afternoon +12h (12-18 PKT):** Model MAE ({ws['aft_m']} µg/m³) marginally trails seasonal ({ws['aft_s']} µg/m³).
+           - **Lahore Coverage:** Observes {ws['lhe_cov_min']}% - {ws['lhe_cov_max']}%, falling below the nominal 80% target.
+           - **Peak Episodes (Very Unhealthy, >150 µg/m³):** Coverage drops to {ws['vu_cov']}% (+6h), which is crucial context for emergency health/school advisories.
         """)
 
     # 2. Granular Errors by Group

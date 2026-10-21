@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saaf Hawa: live pipeline status</title>
+<style>
+:root{--bg:#f4f5f6;--card:#fff;--ink:#1f2933;--mute:#66707a;--line:#dde1e5;--teal:#0f6b6b;--ok:#1b7f4b;--warn:#a56a00;--bad:#a12d2d;--okbg:#e4f4ea;--warnbg:#fdf1d8;--badbg:#fbe5e5}
+@media (prefers-color-scheme:dark){:root{--bg:#14181c;--card:#1d2328;--ink:#e6e9ec;--mute:#98a2ab;--line:#2e363d;--teal:#58c0c0;--ok:#6fd49b;--warn:#f0c15a;--bad:#f08a8a;--okbg:#17301f;--warnbg:#3a2f12;--badbg:#3b1b1b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header,main,footer{max-width:1060px;margin:0 auto;padding:0 16px}
+header{padding-top:28px;padding-bottom:8px}
+h1{margin:0;font-size:26px}
+h2{margin:0 0 10px;font-size:16px}
+.sub{color:var(--mute);margin:4px 0 0}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:10px;color:var(--mute);font-size:13px}
+a{color:var(--teal)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px;margin:14px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.big{font-size:22px;font-weight:650}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:600}
+.b{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.bad{background:var(--badbg);color:var(--bad)}
+.mute{color:var(--mute)}.small{font-size:12px}
+.err{color:var(--bad)}
+footer{padding-bottom:30px;color:var(--mute);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Saaf Hawa (صاف ہوا)</h1>
+  <p class="sub">Live pipeline status: data freshness, quality status and last successful run. Read from the latest hourly run, never fixed numbers.</p>
+  <div class="top"><span id="updated">Loading…</span><a id="full" href="#" target="_blank" rel="noopener">Open the full dashboard</a></div>
+</header>
+<main>
+  <div class="grid">
+    <section class="card"><h2>Data freshness</h2><div id="fresh" class="wrap">Loading…</div></section>
+    <section class="card"><h2>Last successful run</h2><div id="run">Loading…</div></section>
+    <section class="card"><h2>Quality status</h2><div id="qual">Loading…</div></section>
+  </div>
+  <section class="card"><h2>Latest forecasts (80% interval, µg/m³ PM2.5)</h2><div id="fc" class="wrap">Loading…</div>
+    <p class="small mute">Draft advisory rule: "limit outdoor activity" if p50 ≥ 55.5 at any horizon; "possible exceedance" if p90 ≥ 55.5. Cities without ground-truth sensors are withheld. Drafts need human approval.</p></section>
+  <div class="grid">
+    <section class="card"><h2>Recent pipeline runs</h2><div id="runs" class="wrap">Loading…</div></section>
+    <section class="card"><h2>Latest quality decisions</h2><div id="dq" class="wrap">Loading…</div></section>
+  </div>
+</main>
+<footer>Times in PKT. Information, not professional advice. In a health emergency call Punjab Rescue 1122.</footer>
+<script>
+const BASE = "https://raw.githubusercontent.com/kazmi4700937-hub/clean-air/main/";
+const FULL = "https://clean-air-yxqjyczrqscvbdypekx7em.streamlit.app";
+const LIMITS = {openaq: 3, meteo: 6, firms: 12};
+const SOURCES = [["openaq", "OpenAQ community sensors", /^OpenAQ/i], ["meteo", "Open-Meteo (CAMS, ERA5)", /Open-Meteo/i], ["firms", "NASA FIRMS fires", /FIRMS/i]];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const pkt = d => d.toLocaleString("en-GB", {timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false});
+const hrs = d => (Date.now() - d.getTime()) / 36e5;
+const badge = (txt, cls) => `<span class="b ${cls}">${esc(txt)}</span>`;
+const table = (head, rows) => `<table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</table>`;
+
+function parseCSV(t) {
+  const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { row.push(f); f = ""; }
+    else if (c === "\n") { row.push(f); rows.push(row); row = []; f = ""; }
+    else if (c !== "\r") f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  const head = rows.shift() || [];
+  return rows.filter(r => r.length === head.length).map(r => Object.fromEntries(head.map((h, i) => [h, r[i]])));
+}
+async function get(path, json) {
+  const r = await fetch(BASE + path + "?t=" + Math.floor(Date.now() / 60000));
+  if (!r.ok) throw new Error(path + " HTTP " + r.status);
+  return json ? r.json() : parseCSV(await r.text());
+}
+function ageBadge(age, limit) {
+  if (age === null) return badge("no data", "bad");
+  return age > limit ? badge("LATE", "bad") : badge("on time", "ok");
+}
+function freshness(manifest, history) {
+  const src = SOURCES.map(([key, label, re]) => {
+    const ts = manifest.filter(m => re.test(m.source) && !/AirNow/i.test(m.source)).map(m => new Date(m.fetch_time_utc)).filter(d => !isNaN(d));
+    const last = ts.length ? new Date(Math.max(...ts)) : null;
+    return {label, last, age: last ? hrs(last) : null, limit: LIMITS[key]};
+  });
+  const byCity = {};
+  history.forEach(h => { const d = new Date(h.ts_utc); if (!isNaN(d) && (!byCity[h.city] || d > byCity[h.city])) byCity[h.city] = d; });
+  const cities = Object.entries(byCity).map(([city, last]) => ({city, last, age: hrs(last), limit: LIMITS.openaq}));
+  return {src, cities};
+}
+function lastRun(runs) {
+  const r = runs.map(x => ({...x, t: new Date(x.start_time)})).filter(x => !isNaN(x.t)).sort((a, b) => b.t - a.t);
+  return {all: r, ok: r.find(x => x.state === "Completed") || null};
+}
+function latestQuality(log) {
+  const rows = log.map(x => ({...x, t: new Date(x.ts)})).filter(x => !isNaN(x.t));
+  if (!rows.length) return {run: null, counts: {}, rows: []};
+  const run = rows.reduce((a, b) => b.t > a.t ? b : a).run_id;
+  const cur = rows.filter(x => x.run_id === run);
+  const counts = {};
+  cur.forEach(x => counts[x.action] = (counts[x.action] || 0) + (Number(x.rows_affected) || 0));
+  return {run, counts, rows: rows.sort((a, b) => b.t - a.t).slice(0, 8)};
+}
+function advisory(rows) {
+  const num = s => Number(s);
+  const p90 = r => { const m = String(r["80% Conformal Band [p10, p90]"]).match(/-\s*([\d.]+)\]/); return m ? Number(m[1]) : null; };
+  if (rows.some(r => num(r["p50 Forecast (ug/m3)"]) >= 55.5)) return badge("Draft: limit outdoor activity", "bad");
+  if (rows.some(r => p90(r) !== null && p90(r) >= 55.5)) return badge("Draft: possible exceedance", "warn");
+  return badge("Draft: standard conditions", "ok");
+}
+const safe = async (id, fn) => { try { await fn(); } catch (e) { $(id).innerHTML = `<span class="err">Could not load: ${esc(e.message)}</span>`; } };
+
+async function load() {
+  $("full").href = FULL;
+  const [status, manifest, hist, runs, qlog, fc] = await Promise.allSettled([
+    get("state/status.json", true), get("data/manifest.csv"), get("state/recent_history.csv"),
+    get("state/prefect_runs.csv"), get("state/quality_log.csv"), get("state/forecasts.json", true)]);
+  const val = p => p.status === "fulfilled" ? p.value : null;
+  const miss = p => p.reason ? p.reason.message : "";
+  $("updated").textContent = "Checked " + pkt(new Date()) + " PKT (refreshes every minute)";
+
+  await safe("fresh", async () => {
+    if (!val(manifest)) throw new Error(miss(manifest));
+    const f = freshness(val(manifest), val(hist) || []);
+    $("fresh").innerHTML = table(["Source", "Latest fetch (PKT)", "Age (h)", "Limit (h)", "Status"],
+      f.src.map(s => [esc(s.label), s.last ? pkt(s.last) : "never", s.age === null ? "n/a" : s.age.toFixed(1), s.limit, ageBadge(s.age, s.limit)])) +
+      `<p class="small mute">Latest ground-truth reading per city (OpenAQ limit ${LIMITS.openaq} h)</p>` +
+      table(["City", "Last reading (PKT)", "Age (h)", "Status"],
+        f.cities.map(c => [esc(c.city), pkt(c.last), c.age.toFixed(1), ageBadge(c.age, c.limit)]));
+  });
+
+  await safe("run", async () => {
+    if (!val(runs)) throw new Error(miss(runs));
+    const r = lastRun(val(runs)); const st = val(status) || {};
+    const ok = r.ok;
+    $("run").innerHTML = ok
+      ? `<div class="big">${hrs(ok.t).toFixed(1)} h ago</div><div>${pkt(ok.t)} PKT · ${esc(ok.name)} · ${Number(ok.total_run_time).toFixed(1)} s</div>
+         <p>Pipeline status: ${badge(st.run_status || "unknown", st.run_status === "HEALTHY" ? "ok" : "warn")}
+         ${st.gold_tables ? `<span class="small mute"> Gold tables: ${esc(Object.entries(st.gold_tables).map(([k, v]) => k + " " + v).join(", "))}</span>` : ""}</p>`
+      : `<span class="err">No completed run in the history.</span>`;
+    $("runs").innerHTML = table(["Started (PKT)", "Run", "State", "Seconds"],
+      r.all.slice(0, 10).map(x => [pkt(x.t), esc(x.name), badge(x.state, x.state === "Completed" ? "ok" : "bad"), Number(x.total_run_time).toFixed(1)])) +
+      `<p class="small mute">${r.all.length} runs in the exported history, ${r.all.filter(x => x.state !== "Completed").length} not completed. Failed runs are kept.</p>`;
+  });
+
+  await safe("qual", async () => {
+    if (!val(qlog)) throw new Error(miss(qlog));
+    const q = latestQuality(val(qlog)); const st = val(status) || {};
+    $("qual").innerHTML = `<div>Gate result: ${badge(st.run_status || "unknown", st.run_status === "HEALTHY" ? "ok" : "warn")}</div>
+      <p>Latest run <b>${esc(q.run)}</b>, rows affected by action:</p>` +
+      table(["Action", "Rows"], Object.entries(q.counts).map(([a, n]) => [esc(a), n])) +
+      `<p class="small mute">${st.quality_events_logged ?? "?"} decisions logged in total. Every fix, fill and flag is recorded with its rule and reason.</p>`;
+    $("dq").innerHTML = table(["Time (PKT)", "Gate", "Rule", "Action", "Rows", "Reason"],
+      q.rows.map(x => [pkt(x.t), esc(x.gate), esc(x.rule), esc(x.action), esc(x.rows_affected), esc(String(x.reason).slice(0, 90))]));
+  });
+
+  await safe("fc", async () => {
+    if (!val(fc)) throw new Error(miss(fc));
+    const rows = Object.values(val(fc)).map(c => {
+      if (!c.monitored) return [esc(c.city), badge("withheld", "warn"), "", "", "", esc(c.qc_flag)];
+      const t = c.forecast_table;
+      const cell = h => { const r = t.find(x => x.Horizon === h); return r ? `${Number(r["p50 Forecast (ug/m3)"]).toFixed(0)} <span class="mute">${esc(r["80% Conformal Band [p10, p90]"])}</span>` : ""; };
+      return [esc(c.city), advisory(t), cell("+6h"), cell("+12h"), cell("+24h"), esc(c.qc_flag)];
+    });
+    $("fc").innerHTML = table(["City", "Draft advisory", "+6h p50 [p10 - p90]", "+12h", "+24h", "Data flag"], rows);
+  });
+}
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
