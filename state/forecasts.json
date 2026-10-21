@@ -7,7 +7,7 @@
     "last_observation_utc": "2026-09-01 02:00:00+05:00",
     "row_id": "LHE-20261014T1300Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (171.0h old)",
+    "qc_flag": "STALE_FEED (172.0h old)",
     "forecast_table": [],
     "advisory_triggered": false,
     "notice": "Live community sensor feed on OpenAQ has been silent since 2026-09-01 02:00:00+05:00 (staleness exceeds 3-hour limit). Forecast is withheld per Data Quality Gate 2 freshness rule."
@@ -57,7 +57,7 @@
     "last_observation_utc": "2024-10-25 21:00:00+05:00",
     "row_id": "KHI-20241025T1600Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (17424.0h old)",
+    "qc_flag": "STALE_FEED (17425.0h old)",
     "forecast_table": [],
     "advisory_triggered": false,
     "notice": "Continuous reference and community monitors have been inactive since 2024-10-25 21:00:00+05:00. Forecast is withheld per Data Quality Gate 2 freshness rule."
