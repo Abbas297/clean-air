@@ -26,7 +26,7 @@ Independent publishers: OpenAQ community sensors, U.S. AirNow embassy archive (n
 • Peshawar transfer: Peshawar has 0 training hours and represents 45.5% of test rows (10,710 of 23,547); the result is largely an out-of-distribution transfer to an unseen city.
 • Partial circularity: Islamabad calibration uses series s_1343270 which matches the embassy monitor in ~75% of overlap hours; treat its calibration R² as not independent evidence.
 • Advisory rule: Criterion 4 met at +6h and +12h, but not at +24h (recall 75.0% vs 82.4% baseline; p50 chosen to avoid 65% false alarms); Lahore base rate is 72.3%.
-• Run history: 22 runs (1 not Completed) from 2026-10-21 02:35 AM PKT to 2026-10-21 07:59 PM PKT; longest gap 4.66 h between unyielding-beluga and rough-snake; 42 missing fire dates treated as 0 fires (cause not established).
+• Run history: 23 runs (1 not Completed) from 2026-10-21 02:35 AM PKT to 2026-10-21 09:01 PM PKT; longest gap 4.66 h between unyielding-beluga and rough-snake; 42 missing fire dates treated as 0 fires (cause not established).
 
 ## 5. Responsible AI
 The Insight Agent takes numbers only from SQL on Gold tables, stores row IDs with each answer, answers "I don't know" when retrieval or data is missing, points to Rescue 1122 / Health helpline 1033 for emergencies, and labels unvalidated cities. Outputs are information, not professional advice.
