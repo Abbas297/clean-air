@@ -110,7 +110,7 @@ From [Summary.md](Summary.md):
 - **Uncalibrated labels:** Karachi and Peshawar had fewer than 30 reference-monitor overlap hours in the training window. Raw sensor values are used as published (identity) and clearly marked uncalibrated.
 - **Label source shift:** Test period labels come from different sensors than training (e.g. Islamabad training on `s_1343270` and testing on F-7 AirGradient; Lahore adding Barki AirGradient in May 2025). Test error reflects this real-world sensor transition.
 - **Weakest overall group:** Smog season (Oct–Feb) at +24h (MAE 37.87 µg/m³, 80% coverage 79.4%).
-- **Subgroups trailing baselines:** Night (00–06 PKT) at +6h trails persistence (25.49 vs 25.20 µg/m³); Afternoon (12–18 PKT) at +12h trails seasonal (25.18 vs 24.90 µg/m³).
+- **Subgroups trailing baselines:** Night (00–06 PKT) at +6h trails persistence (25.48 vs 25.20 µg/m³); Afternoon (12–18 PKT) at +12h trails seasonal (25.15 vs 24.90 µg/m³).
 - **Coverage drops during acute peaks:** Lahore achieves 74.7–76.0% coverage across horizons (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% at +6h and 67.3% at +12h (MAE 53.83 µg/m³). Interval uncertainty is under-covered in severe smog peaks.
 - **Peshawar out-of-distribution transfer:** Peshawar has 0 training hours and accounts for 45.5% of test rows (10,710 of 23,547). Scored as pure zero-shot spatial transfer.
 - **Partial circularity in calibration check:** Islamabad training series `s_1343270` matches the embassy monitor in ~75% of overlap hours; its calibration R² should not be treated as independent evidence.
