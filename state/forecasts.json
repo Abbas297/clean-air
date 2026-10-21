@@ -7,23 +7,47 @@
     "last_observation_utc": "2026-10-14 18:00:00+05:00",
     "row_id": "LHE-20261014T1300Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (159.5h old)",
+    "qc_flag": "STALE_FEED (159.7h old)",
     "forecast_table": [],
     "advisory_triggered": false,
     "notice": "Live community sensor feed on OpenAQ has been silent since 2026-10-14 18:00:00+05:00 (staleness exceeds 3-hour limit). Forecast is withheld per Data Quality Gate 2 freshness rule."
   },
   "islamabad": {
     "city": "Islamabad",
-    "monitored": false,
-    "stale": true,
-    "latest_pm": null,
-    "last_observation_utc": "2026-10-21 03:00:00+05:00",
-    "row_id": "ISB-20261020T2200Z",
-    "n_sensors": 0,
-    "qc_flag": "STALE_FEED (6.5h old)",
-    "forecast_table": [],
-    "advisory_triggered": false,
-    "notice": "Islamabad ground truth is stale (last observation: 2026-10-21 03:00:00+05:00). Forecast is withheld per Data Quality Gate 2 freshness rule."
+    "monitored": true,
+    "stale": false,
+    "latest_pm": 39.108588471008524,
+    "last_observation_utc": "2026-10-21 09:00:00+05:00",
+    "row_id": "ISB-20261021T0400Z",
+    "n_sensors": 1,
+    "qc_flag": "SINGLE_SENSOR_WARNING",
+    "forecast_table": [
+      {
+        "Horizon": "+6h",
+        "p50 Forecast (ug/m3)": 36.2,
+        "80% Conformal Band [p10, p90]": "[6.5 - 67.7]",
+        "Baseline A (Persistence)": 39.1,
+        "Baseline B (Seasonal-Hour)": 32.6,
+        "CAMS at issue time": 21.0
+      },
+      {
+        "Horizon": "+12h",
+        "p50 Forecast (ug/m3)": 35.7,
+        "80% Conformal Band [p10, p90]": "[7.6 - 78.7]",
+        "Baseline A (Persistence)": 39.1,
+        "Baseline B (Seasonal-Hour)": 45.7,
+        "CAMS at issue time": 21.0
+      },
+      {
+        "Horizon": "+24h",
+        "p50 Forecast (ug/m3)": 38.2,
+        "80% Conformal Band [p10, p90]": "[6.0 - 72.9]",
+        "Baseline A (Persistence)": 39.1,
+        "Baseline B (Seasonal-Hour)": 33.1,
+        "CAMS at issue time": 21.0
+      }
+    ],
+    "advisory_triggered": false
   },
   "karachi": {
     "city": "Karachi",
@@ -33,23 +57,47 @@
     "last_observation_utc": "2024-10-25 21:00:00+05:00",
     "row_id": "KHI-20241025T1600Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (17412.5h old)",
+    "qc_flag": "STALE_FEED (17412.7h old)",
     "forecast_table": [],
     "advisory_triggered": false,
     "notice": "Continuous reference and community monitors have been inactive since 2024-10-25 21:00:00+05:00. Forecast is withheld per Data Quality Gate 2 freshness rule."
   },
   "peshawar": {
     "city": "Peshawar",
-    "monitored": false,
-    "stale": true,
-    "latest_pm": null,
-    "last_observation_utc": "2026-10-21 03:00:00+05:00",
-    "row_id": "PEW-20261020T2200Z",
-    "n_sensors": 0,
-    "qc_flag": "STALE_FEED (6.5h old)",
-    "forecast_table": [],
-    "advisory_triggered": false,
-    "notice": "Peshawar ground truth is stale (last observation: 2026-10-21 03:00:00+05:00). Forecast is withheld per Data Quality Gate 2 freshness rule."
+    "monitored": true,
+    "stale": false,
+    "latest_pm": 45.0,
+    "last_observation_utc": "2026-10-21 09:00:00+05:00",
+    "row_id": "PEW-20261021T0400Z",
+    "n_sensors": 1,
+    "qc_flag": "SINGLE_SENSOR_WARNING",
+    "forecast_table": [
+      {
+        "Horizon": "+6h",
+        "p50 Forecast (ug/m3)": 44.7,
+        "80% Conformal Band [p10, p90]": "[6.9 - 85.8]",
+        "Baseline A (Persistence)": 45.0,
+        "Baseline B (Seasonal-Hour)": 30.9,
+        "CAMS at issue time": 34.6
+      },
+      {
+        "Horizon": "+12h",
+        "p50 Forecast (ug/m3)": 46.2,
+        "80% Conformal Band [p10, p90]": "[9.8 - 77.5]",
+        "Baseline A (Persistence)": 45.0,
+        "Baseline B (Seasonal-Hour)": 58.5,
+        "CAMS at issue time": 34.6
+      },
+      {
+        "Horizon": "+24h",
+        "p50 Forecast (ug/m3)": 52.7,
+        "80% Conformal Band [p10, p90]": "[8.3 - 105.8]",
+        "Baseline A (Persistence)": 45.0,
+        "Baseline B (Seasonal-Hour)": 44.2,
+        "CAMS at issue time": 34.6
+      }
+    ],
+    "advisory_triggered": false
   },
   "faisalabad": {
     "city": "Faisalabad",
