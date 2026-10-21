@@ -168,9 +168,14 @@ async function load() {
       if (!c.monitored) return [esc(c.city), badge("withheld", "warn"), "", "", "", esc(c.qc_flag)];
       const t = c.forecast_table;
       const cell = h => { const r = t.find(x => x.Horizon === h); return r ? `${Number(r["p50 Forecast (ug/m3)"]).toFixed(0)} <span class="mute">${esc(r["80% Conformal Band [p10, p90]"])}</span>` : ""; };
-      return [esc(c.city), advisory(t), cell("+6h"), cell("+12h"), cell("+24h"), esc(c.qc_flag)];
+      const cityLabel = c.city === "Peshawar"
+        ? `${esc(c.city)} <span class="mute small" title="Zero training hours; identity calibration. Forecasts are indicative only.">(uncalibrated, zero-shot)</span>`
+        : esc(c.city);
+      return [cityLabel, advisory(t), cell("+6h"), cell("+12h"), cell("+24h"), esc(c.qc_flag)];
     });
-    $("fc").innerHTML = table(["City", "Draft advisory", "+6h p50 [p10 - p90]", "+12h", "+24h", "Data flag"], rows);
+    $("fc").innerHTML = table(["City", "Draft advisory", "+6h p50 [p10 - p90]", "+12h", "+24h", "Data flag"], rows) +
+      `<p class="small mute">Peshawar: uncalibrated, no training history (zero-shot), indicative only. ` +
+      `Forecast flag age is the age of the newest warehouse row (may have null pm2.5); freshness age is the age of the newest valid (non-null) reading.</p>`;
   });
 }
 load();

@@ -168,10 +168,14 @@ def build_gold_warehouse(
             )
 
     # Distribution Drift Check (PSI)
+    # Sort by ts_utc so ref=older half, cur=recent half, regardless of city ordering.
+    # Bug fixed 2026-10-21: previously split on unsorted rows → compared lahore vs peshawar
+    # distributions → ~28 k false R07 FLAGs.
     if len(df_city_pm25) >= 40:
-        split_idx = len(df_city_pm25) // 2
-        ref_vals = df_city_pm25["pm25_cal"].iloc[:split_idx].values
-        cur_vals = df_city_pm25["pm25_cal"].iloc[split_idx:].values
+        df_psi = df_city_pm25.sort_values(by=["ts_utc", "city"]).reset_index(drop=True)
+        split_idx = len(df_psi) // 2
+        ref_vals = df_psi["pm25_cal"].iloc[:split_idx].values
+        cur_vals = df_psi["pm25_cal"].iloc[split_idx:].values
         psi = compute_psi(ref_vals, cur_vals)
         if psi > 0.25:
             append_quality_log(
