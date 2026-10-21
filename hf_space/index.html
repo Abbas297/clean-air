@@ -43,7 +43,7 @@ footer{padding-bottom:30px;color:var(--mute);font-size:12px}
     <section class="card"><h2>Quality status</h2><div id="qual">Loading…</div></section>
   </div>
   <section class="card"><h2>Latest forecasts (80% interval, µg/m³ PM2.5)</h2><div id="fc" class="wrap">Loading…</div>
-    <p class="small mute">Advisory rule (illustrative draft, not evaluated): "limit outdoor activity" if p50 ≥ 55.5 at any horizon; "possible exceedance" if p90 ≥ 55.5. Cities without ground-truth sensors are withheld. Illustrative drafts need human approval.</p></section>
+    <p class="small mute">Advisory rule (illustrative draft): "limit outdoor activity" if p50 ≥ 55.5 at any horizon; "possible exceedance" if p90 ≥ 55.5. Note: Evaluated rule (docs/advisory_eval.md) is scored per horizon, while this live card triggers on any horizon. Cities without ground-truth sensors are withheld.</p></section>
   <div class="grid">
     <section class="card"><h2>Recent pipeline runs</h2><div id="runs" class="wrap">Loading…</div></section>
     <section class="card"><h2>Latest quality decisions</h2><div id="dq" class="wrap">Loading…</div></section>

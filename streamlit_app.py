@@ -222,16 +222,16 @@ with tab2:
                     p90_vals.append(float(matches[1]))
 
             if any(v >= 55.5 for v in p50_vals):
-                st.error("🚨 **ADVISORY (illustrative draft, not evaluated): LIMIT OUTDOOR ACTIVITY**")
+                st.error("🚨 **ADVISORY (illustrative draft, any-horizon): LIMIT OUTDOOR ACTIVITY**")
                 st.markdown("**Intervention:** Enforce N95 respirators, suspend outdoor morning assemblies, shift physical education indoors.")
             elif any(v >= 55.5 for v in p90_vals):
-                st.warning("⚠️ **ADVISORY (illustrative draft, not evaluated): POSSIBLE EXCEEDANCE**")
+                st.warning("⚠️ **ADVISORY (illustrative draft, any-horizon): POSSIBLE EXCEEDANCE**")
                 st.markdown("**Intervention:** Heightened monitoring; vulnerable populations and schools prepare indoor contingency plans.")
             else:
-                st.success("✅ **ADVISORY (illustrative draft, not evaluated): STANDARD CONDITIONS**")
+                st.success("✅ **ADVISORY (illustrative draft, any-horizon): STANDARD CONDITIONS**")
                 st.markdown("**Intervention:** Outdoor activities permitted under standard monitoring.")
 
-            st.caption("Advisory Rule (illustrative draft, not evaluated): 'limit outdoor activity' triggers if LightGBM p50 at any horizon (+6h, +12h, +24h) ≥ 55.5 µg/m³; 'possible exceedance' triggers if the 80% conformal upper bound (p90) ≥ 55.5 µg/m³. This rule was not declared and was not formally evaluated.")
+            st.caption("Advisory Rule (illustrative draft): triggers if LightGBM p50 at ANY horizon (+6h, +12h, +24h) ≥ 55.5 µg/m³ ('possible exceedance' if p90 ≥ 55.5). Note: The officially evaluated rule in docs/advisory_eval.md is evaluated strictly PER HORIZON (p50 ≥ 55.5 at +6h, +12h, or +24h independently), whereas this live dashboard card pools across all three horizons.")
 
             m1, m2, m3 = st.columns(3)
             m1.metric("Latest Calibrated Ground Truth", f"{round(curr_pm, 1)} µg/m³")

@@ -83,6 +83,7 @@ def _summary_paragraphs(f):
     lim.append("Coverage drops in critical slices: Lahore achieves 74.7-76.0% (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% (MAE 53.83).")
     lim.append("Peshawar transfer: Peshawar has 0 training hours and represents 45.5% of test rows (10,710 of 23,547); the result is largely an out-of-distribution transfer to an unseen city.")
     lim.append("Partial circularity: Islamabad calibration uses series s_1343270 which matches the embassy monitor in ~75% of overlap hours; treat its calibration R² as not independent evidence.")
+    lim.append("Advisory rule: Criterion 4 met at +6h and +12h, but not at +24h (recall 75.0% vs 82.4% baseline; p50 chosen to avoid 65% false alarms); Lahore base rate is 72.3%.")
     if "runs_info" in f:
         ri = f["runs_info"]
         lim.append(f"Run history: {ri['n_runs']} runs ({ri['n_not_completed']} not Completed) from {ri['first_pkt']} to {ri['last_pkt']}; longest gap {ri['max_gap']:.2f} h between {ri['run_before']} and {ri['run_after']}; 42 missing fire dates treated as 0 fires (cause not established).")

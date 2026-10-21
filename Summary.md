@@ -25,6 +25,7 @@ Independent publishers: OpenAQ community sensors, U.S. AirNow embassy archive (n
 • Coverage drops in critical slices: Lahore achieves 74.7-76.0% (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% (MAE 53.83).
 • Peshawar transfer: Peshawar has 0 training hours and represents 45.5% of test rows (10,710 of 23,547); the result is largely an out-of-distribution transfer to an unseen city.
 • Partial circularity: Islamabad calibration uses series s_1343270 which matches the embassy monitor in ~75% of overlap hours; treat its calibration R² as not independent evidence.
+• Advisory rule: Criterion 4 met at +6h and +12h, but not at +24h (recall 75.0% vs 82.4% baseline; p50 chosen to avoid 65% false alarms); Lahore base rate is 72.3%.
 • Run history: 11 runs (1 not Completed) from 2026-10-21 02:35 AM PKT to 2026-10-21 09:59 AM PKT; longest gap 4.66 h between unyielding-beluga and rough-snake; 42 missing fire dates treated as 0 fires (cause not established).
 
 ## 5. Responsible AI

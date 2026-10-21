@@ -78,12 +78,13 @@ def get_city_forecast(city_name: str):
                 df_forecast = df_forecast.rename(columns={"CAMS Hindcast": "CAMS at issue time"})
             advisory_triggered = bool(city_payload.get("advisory_triggered", False))
 
-            badge = "ADVISORY (illustrative draft, not evaluated): LIMIT OUTDOOR ACTIVITIES" if advisory_triggered else "ADVISORY (illustrative draft, not evaluated): STANDARD CONDITIONS"
+            badge = "ADVISORY (illustrative draft, any-horizon): LIMIT OUTDOOR ACTIVITIES" if advisory_triggered else "ADVISORY (illustrative draft, any-horizon): STANDARD CONDITIONS"
             summary = (
                 f"### {city_name} Air Quality Forecast\n"
                 f"- **Latest Calibrated Ground Truth (Row ID: `{row_id}`):** {curr_pm} µg/m³\n"
                 f"- **Active Monitoring Sensors:** {n_sensors} (QC: `{qc_flag}`)\n"
-                f"- **Health Action (illustrative draft, not evaluated):** {'Enforce masks (N95), cancel morning outdoor assemblies, move gym indoors.' if advisory_triggered else 'Normal outdoor school activities permissible.'}"
+                f"- **Health Action (illustrative draft, any-horizon):** {'Enforce masks (N95), cancel morning outdoor assemblies, move gym indoors.' if advisory_triggered else 'Normal outdoor school activities permissible.'}\n"
+                f"*(Note: Evaluated rule in docs/advisory_eval.md is scored per horizon; this dashboard summary card triggers across any horizon).* "
             )
             return summary, badge, df_forecast
 

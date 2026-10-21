@@ -111,4 +111,5 @@ From [Summary.md](Summary.md):
 - **Coverage drops during acute peaks:** Lahore achieves 74.7–76.0% coverage across horizons (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% at +6h and 67.3% at +12h (MAE 53.83 µg/m³). Interval uncertainty is under-covered in severe smog peaks.
 - **Peshawar out-of-distribution transfer:** Peshawar has 0 training hours and accounts for 45.5% of test rows (10,710 of 23,547). Scored as pure zero-shot spatial transfer.
 - **Partial circularity in calibration check:** Islamabad training series `s_1343270` matches the embassy monitor in ~75% of overlap hours; its calibration R² should not be treated as independent evidence.
+- **Advisory rule:** Success Criterion 4 is met at +6h and +12h, but NOT met at +24h (recall 75.0% vs 82.4% baseline; $p_{50}$ chosen to avoid 65% false alarms); Lahore base rate is 72.3% of test hours exceeding 55.5 µg/m³. See [docs/advisory_eval.md](docs/advisory_eval.md).
 - **Run history:** Pipeline execution records start at 02:35 AM PKT due to late scheduler activation.
