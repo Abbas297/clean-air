@@ -77,10 +77,50 @@ def _summary_paragraphs(f):
         lim.append("Uncalibrated labels (no reference-monitor overlap in the training window): " + ", ".join(sorted(f["uncal_cities"])) + ".")
     lim.append("Labels in the test period come from different sensors than in training (sensor change in May 2025), so test error includes a label-source shift.")
     lim.append(f"Weakest group: {weak[0]} at {weak[1]} (MAE {weak[2]:.2f}, 80% coverage {weak[3]:.1f}%).")
+    grp = f["group"]
     if len(f["worse"]):
         names = "; ".join(f"{r.group_value} {r.horizon}" for r in f["worse"].itertuples())
-        lim.append(f"Subgroups trailing baselines: {names} (Night +6h trails persistence 25.49 vs 25.20; Afternoon +12h trails seasonal 25.18 vs 24.90).")
-    lim.append("Coverage drops in critical slices: Lahore achieves 74.7-76.0% (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% (MAE 53.83).")
+        # Build per-subgroup detail sentences entirely from data
+        details = []
+        night_6h = grp[(grp["group_type"] == "diurnal") &
+                       (grp["group_value"] == "Night (00-06 PKT)") &
+                       (grp["horizon"] == "+6h")]
+        if len(night_6h) and not bool(night_6h.iloc[0]["beats_baselines"]):
+            r = night_6h.iloc[0]
+            details.append(
+                f"Night +6h trails persistence {float(r['model_mae']):.2f} vs {float(r['persistence_mae']):.2f}"
+            )
+        aft_12h = grp[(grp["group_type"] == "diurnal") &
+                      (grp["group_value"] == "Afternoon (12-18 PKT)") &
+                      (grp["horizon"] == "+12h")]
+        if len(aft_12h) and not bool(aft_12h.iloc[0]["beats_baselines"]):
+            r = aft_12h.iloc[0]
+            details.append(
+                f"Afternoon +12h trails seasonal {float(r['model_mae']):.2f} vs {float(r['seasonal_mae']):.2f}"
+            )
+        detail_str = "; ".join(details)
+        suffix = f" ({detail_str})." if detail_str else "."
+        lim.append(f"Subgroups trailing baselines: {names}{suffix}")
+    # Coverage-drop sentence: every number read from data
+    lah_covs = grp[(grp["group_type"] == "city") & (grp["group_value"] == "lahore")]
+    if len(lah_covs):
+        cov_vals = sorted(lah_covs["coverage_80"].tolist())
+        lah_lo, lah_hi = min(cov_vals), max(cov_vals)
+        lah_str = f"{lah_lo:.1f}" if lah_lo == lah_hi else f"{lah_lo:.1f}-{lah_hi:.1f}"
+    else:
+        lah_str = "n/a"
+    vu_6h = grp[(grp["group_type"] == "aqi_tier") &
+                (grp["group_value"].str.contains("Very")) &
+                (grp["horizon"] == "+6h")]
+    if len(vu_6h):
+        vu = vu_6h.iloc[0]
+        lim.append(
+            f"Coverage drops in critical slices: Lahore achieves {lah_str}% (target 80%); "
+            f"Very Unhealthy tier (>150 µg/m³) coverage drops to "
+            f"{float(vu['coverage_80']):.1f}% (MAE {float(vu['model_mae']):.2f})."
+        )
+    else:
+        lim.append(f"Coverage drops in critical slices: Lahore achieves {lah_str}% (target 80%).")
     lim.append("Peshawar transfer: Peshawar has 0 training hours and represents 45.5% of test rows (10,710 of 23,547); the result is largely an out-of-distribution transfer to an unseen city.")
     lim.append("Partial circularity: Islamabad calibration uses series s_1343270 which matches the embassy monitor in ~75% of overlap hours; treat its calibration R² as not independent evidence.")
     lim.append("Advisory rule: Criterion 4 met at +6h and +12h, but not at +24h (recall 75.0% vs 82.4% baseline; p50 chosen to avoid 65% false alarms); Lahore base rate is 72.3%.")

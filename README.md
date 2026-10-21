@@ -20,9 +20,12 @@ Following the March 2025 shutdown of U.S. Diplomatic Post AirNow monitors in Pak
 
 ## 🌐 Live Deployments
 
+- **GitHub Repository:** [https://github.com/kazmi4700937-hub/clean-air](https://github.com/kazmi4700937-hub/clean-air)
+- **Hugging Face Static Space (primary status dashboard):** [https://huggingface.co/spaces/abbaskazmi07/saaf-hawa](https://huggingface.co/spaces/abbaskazmi07/saaf-hawa)
 - **Streamlit Application:** [https://clean-air.streamlit.app](https://clean-air.streamlit.app)  
   *(Alternative link: [Streamlit Share](https://share.streamlit.io/kazmi4700937-hub/clean-air/main/streamlit_app.py))*
-- **Hugging Face Static Space:** [https://huggingface.co/spaces/abbaskazmi07/saaf-hawa](https://huggingface.co/spaces/abbaskazmi07/saaf-hawa)
+- **Demo Video (≤3 min, no login required):** VIDEO_LINK_TODO
+- **Prefect Dashboard Screenshot:** [docs/prefect_screenshot.png](docs/prefect_screenshot.png) *(add before submission)*
 
 ---
 
@@ -112,4 +115,4 @@ From [Summary.md](Summary.md):
 - **Peshawar out-of-distribution transfer:** Peshawar has 0 training hours and accounts for 45.5% of test rows (10,710 of 23,547). Scored as pure zero-shot spatial transfer.
 - **Partial circularity in calibration check:** Islamabad training series `s_1343270` matches the embassy monitor in ~75% of overlap hours; its calibration R² should not be treated as independent evidence.
 - **Advisory rule:** Success Criterion 4 is met at +6h and +12h, but NOT met at +24h (recall 75.0% vs 82.4% baseline; $p_{50}$ chosen to avoid 65% false alarms); Lahore base rate is 72.3% of test hours exceeding 55.5 µg/m³. See [docs/advisory_eval.md](docs/advisory_eval.md).
-- **Run history:** Pipeline execution records start at 02:35 AM PKT due to late scheduler activation.
+- **Run history:** Pipeline execution records start at 02:35 AM PKT on Wed 21 Oct (21:35 UTC 20 Oct). The required submission window opens at 4:00 PM PKT Tue 20 Oct (11:00 UTC). There are therefore **no runs for the first ~10.6 hours** of the window (4:00 PM Tue to 2:35 AM Wed PKT); this gap exists because the scheduler was activated after midnight. No data was lost — the scheduler was not running during that period.
