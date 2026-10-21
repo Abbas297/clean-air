@@ -66,7 +66,7 @@ def fetch_historical_archive(
         output_dir = Path(config.get("paths", {}).get("bronze_airnow", "data/bronze/airnow"))
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    api_key = os.getenv("OPENAQ_API_KEY", config.get("api_keys", {}).get("openaq", ""))
+    api_key = os.getenv("OPENAQ_API_KEY", "")
     headers = {"Accept": "application/json"}
     if api_key:
         headers["X-API-Key"] = api_key

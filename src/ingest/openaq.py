@@ -98,7 +98,7 @@ def fetch_latest(
         output_dir = Path(config.get("paths", {}).get("bronze_openaq", "data/bronze/openaq"))
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    api_key = os.getenv("OPENAQ_API_KEY", config.get("api_keys", {}).get("openaq", ""))
+    api_key = os.getenv("OPENAQ_API_KEY", "")
     headers = {"Accept": "application/json"}
     if api_key:
         headers["X-API-Key"] = api_key
@@ -186,7 +186,7 @@ def fetch_historical_community_sensors(
         output_dir = Path(config.get("paths", {}).get("bronze_openaq", "data/bronze/openaq"))
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    api_key = os.getenv("OPENAQ_API_KEY", config.get("api_keys", {}).get("openaq", ""))
+    api_key = os.getenv("OPENAQ_API_KEY", "")
     headers = {"Accept": "application/json"}
     if api_key:
         headers["X-API-Key"] = api_key

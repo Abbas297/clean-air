@@ -45,8 +45,26 @@ def run_loop():
                     text=True,
                 )
                 if "nothing to commit" not in commit_res.stdout.lower() and "nothing to commit" not in commit_res.stderr.lower():
-                    subprocess.run(["git", "push", "origin", "main"], check=False)
-                    print("[Scheduler Git] Successfully pushed updated state to origin/main", flush=True)
+                    # Pull with rebase and autostash before push
+                    pull_res = subprocess.run(
+                        ["git", "pull", "--rebase", "--autostash", "origin", "main"],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    if pull_res.returncode != 0:
+                        print(f"[Scheduler Git Warning] Pull --rebase stderr: {pull_res.stderr.strip()}", flush=True)
+
+                    push_res = subprocess.run(
+                        ["git", "push", "origin", "main"],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    if push_res.returncode == 0:
+                        print("[Scheduler Git] Successfully pushed updated state to origin/main", flush=True)
+                    else:
+                        print(f"[Scheduler Git Error] Push failed (code {push_res.returncode}):\n{push_res.stderr.strip()}", flush=True)
                 else:
                     print("[Scheduler Git] State unchanged, no commit needed.", flush=True)
             except Exception as ge:

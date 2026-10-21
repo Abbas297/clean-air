@@ -35,7 +35,7 @@ def fetch_latest_fires(
     bbox = config.get("firms_bounding_box", {"min_lat": 28.0, "max_lat": 34.0, "min_lon": 70.0, "max_lon": 77.0})
     area_coords = f"{bbox['min_lon']},{bbox['min_lat']},{bbox['max_lon']},{bbox['max_lat']}"
     
-    map_key = os.getenv("FIRMS_MAP_KEY", config.get("api_keys", {}).get("firms", ""))
+    map_key = os.getenv("FIRMS_MAP_KEY", "")
     source = "VIIRS_SNPP_SP"
 
     records: List[Dict[str, Any]] = []

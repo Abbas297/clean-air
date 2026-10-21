@@ -74,11 +74,7 @@ paths:
   quality_log: "data/gold/quality_log.parquet"
   status_json: "status.json"
 
-api_keys:
-  # Never commit keys. Set OPENAQ_API_KEY and FIRMS_MAP_KEY as environment variables
-  # (see .env.example) or as GitHub / Hugging Face secrets.
-  openaq: ""
-  firms: ""
+# API keys are read strictly from environment variables: OPENAQ_API_KEY and FIRMS_MAP_KEY (see .env.example)
 
 endpoints:
   openaq_v3_base: "https://api.openaq.org/v3"
