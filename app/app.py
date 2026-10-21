@@ -74,6 +74,8 @@ def get_city_forecast(city_name: str):
             n_sensors = city_payload.get("n_sensors")
             qc_flag = city_payload.get("qc_flag")
             df_forecast = pd.DataFrame(city_payload.get("forecast_table", []))
+            if "CAMS Hindcast" in df_forecast.columns:
+                df_forecast = df_forecast.rename(columns={"CAMS Hindcast": "CAMS at issue time"})
             advisory_triggered = bool(city_payload.get("advisory_triggered", False))
 
             badge = "ADVISORY APPROVED (LIMIT OUTDOOR ACTIVITIES)" if advisory_triggered else "ADVISORY DRAFT (STANDARD CONDITIONS)"
@@ -109,7 +111,16 @@ def get_evidence_data():
         f"2. **Conformal Coverage:** Empirical 80% coverage rate is {cov_text}, conforming within the declared 75% - 85% pooled range.\n"
         "3. **Embargo Integrity:** Checked by automated test asserting a strict 24-hour embargo between train, validation, and test splits."
     )
-    return df_eval, evidence_text
+    df_display = df_eval.copy()
+    mask_b = df_display["model"].str.contains("Baseline", na=False)
+    if "coverage_80" in df_display.columns:
+        df_display["coverage_80"] = df_display["coverage_80"].astype(str)
+        df_display.loc[mask_b, "coverage_80"] = ""
+    if "mean_band_width" in df_display.columns:
+        df_display["mean_band_width"] = df_display["mean_band_width"].astype(str)
+        df_display.loc[mask_b, "mean_band_width"] = ""
+
+    return df_display, evidence_text
 
 # -------------------------------------------------------------------
 # Tab 4: Quality Log Viewer

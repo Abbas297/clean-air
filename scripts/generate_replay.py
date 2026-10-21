@@ -27,41 +27,46 @@ def build_replay_dataset(output_path: Path = Path("state/replay.csv")):
     val_end = pd.to_datetime("2025-06-30T23:59:59Z", utc=True)
     df_val = df_matrix[(df_matrix["ts_utc"] >= val_start) & (df_matrix["ts_utc"] <= val_end)]
 
-    # Target: Lahore peak smog episode in test split (Nov 1 to Nov 15, 2025)
+    # Target: Lahore peak smog episode in test split (Nov 1 to Nov 14, 2025)
     ep_start = pd.to_datetime("2025-11-01T00:00:00Z", utc=True)
-    ep_end = pd.to_datetime("2025-11-15T23:59:59Z", utc=True)
+    ep_end = pd.to_datetime("2025-11-14T23:59:59Z", utc=True)
     df_ep = df_matrix[(df_matrix["city"] == "lahore") & (df_matrix["ts_utc"] >= ep_start) & (df_matrix["ts_utc"] <= ep_end)].copy()
+    df_ep = df_ep.dropna(subset=["target_h6", "pm25_cal"]).copy()
+
+    # CQR Calibration on Validation split for +6h
+    valid_val = df_val.dropna(subset=["target_h6"])
+    q10_val = models["lgbm_h6_q10"].predict(valid_val[feature_cols])
+    q90_val = models["lgbm_h6_q90"].predict(valid_val[feature_cols])
+    q_corr = fit_cqr_calibration(valid_val["target_h6"].values, q10_val, q90_val, 0.80)
+
+    p50_h6 = models["lgbm_h6_q50"].predict(df_ep[feature_cols])
+    p10_h6 = models["lgbm_h6_q10"].predict(df_ep[feature_cols])
+    p90_h6 = models["lgbm_h6_q90"].predict(df_ep[feature_cols])
+    p10_adj, p90_adj = apply_cqr_adjustment(p10_h6, p90_h6, q_corr)
+
+    # Strictly align rows at ts_target = ts_utc + 6h
+    ts_target = df_ep["ts_utc"] + pd.Timedelta(hours=6)
+    ts_target_pkt = ts_target.dt.tz_convert("Asia/Karachi")
 
     replay_df = pd.DataFrame({
-        "city": "Lahore (Historical Test Episode)",
-        "ts_utc": df_ep["ts_utc"].dt.strftime("%Y-%m-%d %H:%M:%SZ"),
-        "ts_pkt": df_ep["ts_utc"].dt.tz_convert("Asia/Karachi").dt.strftime("%Y-%m-%d %H:%M"),
-        "actual_pm25": df_ep["pm25_cal"].round(1),
+        "ts_issue_utc": df_ep["ts_utc"].dt.strftime("%Y-%m-%d %H:%M:%SZ"),
+        "ts_target_utc": ts_target.dt.strftime("%Y-%m-%d %H:%M:%SZ"),
+        "ts_target_pkt": ts_target_pkt.dt.strftime("%Y-%m-%d %H:%M"),
+        "actual_target_pm25": df_ep["target_h6"].round(1),
+        "forecast_p50_h6": p50_h6.round(1),
+        "band_p10_h6": p10_adj.round(1),
+        "band_p90_h6": p90_adj.round(1),
+        "pred_persist": df_ep["pm25_cal"].round(1),
     })
 
-    for h in HORIZONS:
-        target_col = f"target_h{h}"
-        p10_model = models[f"lgbm_h{h}_q10"]
-        p50_model = models[f"lgbm_h{h}_q50"]
-        p90_model = models[f"lgbm_h{h}_q90"]
-
-        valid_val = df_val.dropna(subset=[target_col])
-        q10_val = p10_model.predict(valid_val[feature_cols])
-        q90_val = p90_model.predict(valid_val[feature_cols])
-        q_corr = fit_cqr_calibration(valid_val[target_col].values, q10_val, q90_val, 0.80)
-
-        p50 = p50_model.predict(df_ep[feature_cols])
-        p10 = p10_model.predict(df_ep[feature_cols])
-        p90 = p90_model.predict(df_ep[feature_cols])
-        p10_adj, p90_adj = apply_cqr_adjustment(p10, p90, q_corr)
-
-        replay_df[f"forecast_p50_h{h}"] = p50.round(1)
-        replay_df[f"band_p10_h{h}"] = p10_adj.round(1)
-        replay_df[f"band_p90_h{h}"] = p90_adj.round(1)
+    replay_df["in_80_band"] = (
+        (replay_df["actual_target_pm25"] >= replay_df["band_p10_h6"]) &
+        (replay_df["actual_target_pm25"] <= replay_df["band_p90_h6"])
+    )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     replay_df.to_csv(output_path, index=False)
-    print(f"[Replay] Historical test episode written ({len(replay_df)} hours) -> {output_path}")
+    print(f"[Replay] Historical test episode written ({len(replay_df)} aligned rows, peak={replay_df['actual_target_pm25'].max()}) -> {output_path}")
 
 if __name__ == "__main__":
     build_replay_dataset()

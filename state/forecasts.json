@@ -4,96 +4,52 @@
     "monitored": false,
     "stale": true,
     "latest_pm": null,
+    "last_observation_utc": "2026-10-14 18:00:00+05:00",
     "row_id": "LHE-20261014T1300Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (154.8h old)",
+    "qc_flag": "STALE_FEED (159.5h old)",
     "forecast_table": [],
     "advisory_triggered": false,
-    "notice": "Lahore ground truth monitor has been inactive since March 2025 (U.S. Consulate halt); live ground truth is unavailable and 24h forecast is suppressed per freshness policy."
+    "notice": "Live community sensor feed on OpenAQ has been silent since 2026-10-14 18:00:00+05:00 (staleness exceeds 3-hour limit). Forecast is withheld per Data Quality Gate 2 freshness rule."
   },
   "islamabad": {
     "city": "Islamabad",
-    "monitored": true,
-    "stale": false,
-    "latest_pm": 26.230853183653828,
+    "monitored": false,
+    "stale": true,
+    "latest_pm": null,
+    "last_observation_utc": "2026-10-21 03:00:00+05:00",
     "row_id": "ISB-20261020T2200Z",
-    "n_sensors": 1,
-    "qc_flag": "SINGLE_SENSOR_WARNING",
-    "forecast_table": [
-      {
-        "Horizon": "+6h",
-        "p50 Forecast (ug/m3)": 36.0,
-        "80% Conformal Band [p10, p90]": "[8.8 - 78.1]",
-        "Baseline A (Persistence)": 26.2,
-        "Baseline B (Seasonal-Hour)": 31.6,
-        "CAMS Hindcast": 20.1
-      },
-      {
-        "Horizon": "+12h",
-        "p50 Forecast (ug/m3)": 37.0,
-        "80% Conformal Band [p10, p90]": "[4.6 - 75.3]",
-        "Baseline A (Persistence)": 26.2,
-        "Baseline B (Seasonal-Hour)": 32.6,
-        "CAMS Hindcast": 20.1
-      },
-      {
-        "Horizon": "+24h",
-        "p50 Forecast (ug/m3)": 31.2,
-        "80% Conformal Band [p10, p90]": "[1.2 - 62.6]",
-        "Baseline A (Persistence)": 26.2,
-        "Baseline B (Seasonal-Hour)": 30.6,
-        "CAMS Hindcast": 20.1
-      }
-    ],
-    "advisory_triggered": false
+    "n_sensors": 0,
+    "qc_flag": "STALE_FEED (6.5h old)",
+    "forecast_table": [],
+    "advisory_triggered": false,
+    "notice": "Islamabad ground truth is stale (last observation: 2026-10-21 03:00:00+05:00). Forecast is withheld per Data Quality Gate 2 freshness rule."
   },
   "karachi": {
     "city": "Karachi",
     "monitored": false,
     "stale": true,
     "latest_pm": null,
+    "last_observation_utc": "2024-10-25 21:00:00+05:00",
     "row_id": "KHI-20241025T1600Z",
     "n_sensors": 0,
-    "qc_flag": "STALE_FEED (17407.8h old)",
+    "qc_flag": "STALE_FEED (17412.5h old)",
     "forecast_table": [],
     "advisory_triggered": false,
-    "notice": "Karachi ground truth monitor has been inactive since March 2025 (U.S. Consulate halt); live ground truth is unavailable and 24h forecast is suppressed per freshness policy."
+    "notice": "Continuous reference and community monitors have been inactive since 2024-10-25 21:00:00+05:00. Forecast is withheld per Data Quality Gate 2 freshness rule."
   },
   "peshawar": {
     "city": "Peshawar",
-    "monitored": true,
-    "stale": false,
-    "latest_pm": 43.7,
+    "monitored": false,
+    "stale": true,
+    "latest_pm": null,
+    "last_observation_utc": "2026-10-21 03:00:00+05:00",
     "row_id": "PEW-20261020T2200Z",
-    "n_sensors": 1,
-    "qc_flag": "SINGLE_SENSOR_WARNING",
-    "forecast_table": [
-      {
-        "Horizon": "+6h",
-        "p50 Forecast (ug/m3)": 70.0,
-        "80% Conformal Band [p10, p90]": "[20.9 - 130.9]",
-        "Baseline A (Persistence)": 43.7,
-        "Baseline B (Seasonal-Hour)": 44.0,
-        "CAMS Hindcast": 29.7
-      },
-      {
-        "Horizon": "+12h",
-        "p50 Forecast (ug/m3)": 36.3,
-        "80% Conformal Band [p10, p90]": "[3.6 - 73.7]",
-        "Baseline A (Persistence)": 43.7,
-        "Baseline B (Seasonal-Hour)": 30.9,
-        "CAMS Hindcast": 29.7
-      },
-      {
-        "Horizon": "+24h",
-        "p50 Forecast (ug/m3)": 54.7,
-        "80% Conformal Band [p10, p90]": "[7.5 - 96.7]",
-        "Baseline A (Persistence)": 43.7,
-        "Baseline B (Seasonal-Hour)": 40.4,
-        "CAMS Hindcast": 29.7
-      }
-    ],
-    "advisory_triggered": false
+    "n_sensors": 0,
+    "qc_flag": "STALE_FEED (6.5h old)",
+    "forecast_table": [],
+    "advisory_triggered": false,
+    "notice": "Peshawar ground truth is stale (last observation: 2026-10-21 03:00:00+05:00). Forecast is withheld per Data Quality Gate 2 freshness rule."
   },
   "faisalabad": {
     "city": "Faisalabad",
@@ -110,7 +66,7 @@
         "80% Conformal Band [p10, p90]": "[Suspended]",
         "Baseline A (Persistence)": null,
         "Baseline B (Seasonal-Hour)": null,
-        "CAMS Hindcast": null
+        "CAMS at issue time": null
       },
       {
         "Horizon": "+12h",
@@ -118,7 +74,7 @@
         "80% Conformal Band [p10, p90]": "[Suspended]",
         "Baseline A (Persistence)": null,
         "Baseline B (Seasonal-Hour)": null,
-        "CAMS Hindcast": null
+        "CAMS at issue time": null
       },
       {
         "Horizon": "+24h",
@@ -126,7 +82,7 @@
         "80% Conformal Band [p10, p90]": "[Suspended]",
         "Baseline A (Persistence)": null,
         "Baseline B (Seasonal-Hour)": null,
-        "CAMS Hindcast": null
+        "CAMS at issue time": null
       }
     ],
     "advisory_triggered": false,
@@ -147,7 +103,7 @@
         "80% Conformal Band [p10, p90]": "[Suspended]",
         "Baseline A (Persistence)": null,
         "Baseline B (Seasonal-Hour)": null,
-        "CAMS Hindcast": null
+        "CAMS at issue time": null
       },
       {
         "Horizon": "+12h",
@@ -155,7 +111,7 @@
         "80% Conformal Band [p10, p90]": "[Suspended]",
         "Baseline A (Persistence)": null,
         "Baseline B (Seasonal-Hour)": null,
-        "CAMS Hindcast": null
+        "CAMS at issue time": null
       },
       {
         "Horizon": "+24h",
@@ -163,7 +119,7 @@
         "80% Conformal Band [p10, p90]": "[Suspended]",
         "Baseline A (Persistence)": null,
         "Baseline B (Seasonal-Hour)": null,
-        "CAMS Hindcast": null
+        "CAMS at issue time": null
       }
     ],
     "advisory_triggered": false,

@@ -24,21 +24,40 @@ def export_state_bundle(
     unmonitored_cities = ["faisalabad", "multan"]
     forecasts_payload: Dict[str, Any] = {}
 
+    con_temp = duckdb.connect(str(db_path), read_only=True)
+    last_obs_by_city = {}
+    try:
+        df_obs = con_temp.execute("SELECT city, max(ts_utc) as last_ts FROM pm25_city_hourly WHERE pm25_cal IS NOT NULL GROUP BY city").df()
+        for _, r in df_obs.iterrows():
+            last_obs_by_city[r["city"]] = str(r["last_ts"])
+    except Exception:
+        pass
+    con_temp.close()
+
     for c in monitored_cities:
         curr_pm, row_id, n_sensors, qc_flag, rows = generate_forecast_for_city(c, db_path=db_path)
         is_stale = qc_flag is not None and "STALE" in str(qc_flag)
         if is_stale or curr_pm is None:
+            last_ts = last_obs_by_city.get(c, "Unknown")
+            if c == "lahore":
+                notice = f"Live community sensor feed on OpenAQ has been silent since {last_ts} (staleness exceeds 3-hour limit). Forecast is withheld per Data Quality Gate 2 freshness rule."
+            elif c == "karachi":
+                notice = f"Continuous reference and community monitors have been inactive since {last_ts}. Forecast is withheld per Data Quality Gate 2 freshness rule."
+            else:
+                notice = f"{c.title()} ground truth is stale (last observation: {last_ts}). Forecast is withheld per Data Quality Gate 2 freshness rule."
+
             forecasts_payload[c] = {
                 "city": c.title(),
                 "monitored": False,
                 "stale": True,
                 "latest_pm": None,
+                "last_observation_utc": last_ts,
                 "row_id": row_id,
                 "n_sensors": 0,
                 "qc_flag": qc_flag or "INACTIVE",
                 "forecast_table": [],
                 "advisory_triggered": False,
-                "notice": f"{c.title()} ground truth monitor has been inactive since March 2025 (U.S. Consulate halt); live ground truth is unavailable and 24h forecast is suppressed per freshness policy.",
+                "notice": notice,
             }
         else:
             forecasts_payload[c] = {
@@ -46,6 +65,7 @@ def export_state_bundle(
                 "monitored": True,
                 "stale": False,
                 "latest_pm": curr_pm,
+                "last_observation_utc": last_obs_by_city.get(c, "Live"),
                 "row_id": row_id,
                 "n_sensors": n_sensors,
                 "qc_flag": qc_flag,
@@ -69,7 +89,7 @@ def export_state_bundle(
                     "80% Conformal Band [p10, p90]": "[Suspended]",
                     "Baseline A (Persistence)": None,
                     "Baseline B (Seasonal-Hour)": None,
-                    "CAMS Hindcast": None,
+                    "CAMS at issue time": None,
                 }
                 for h in [6, 12, 24]
             ],
@@ -119,6 +139,14 @@ def export_state_bundle(
         hist_path = output_dir / "recent_history.csv"
         df_hist.to_csv(hist_path, index=False)
         exported_files["recent_history"] = hist_path
+
+    # 5. Prefect Run History
+    prefect_csv = Path("prefect_runs.csv")
+    if prefect_csv.exists():
+        import shutil
+        target_prefect = output_dir / "prefect_runs.csv"
+        shutil.copy2(prefect_csv, target_prefect)
+        exported_files["prefect_runs"] = target_prefect
 
     con.close()
     print(f"[State Export] Successfully exported {len(exported_files)} state files to {output_dir}/")

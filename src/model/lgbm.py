@@ -243,7 +243,7 @@ def generate_forecast_for_city(
             "80% Conformal Band [p10, p90]": f"[{p10_val} - {p90_val}]",
             "Baseline A (Persistence)": p_persist,
             "Baseline B (Seasonal-Hour)": p_seasonal,
-            "CAMS Hindcast": round(cams_val, 1),
+            "CAMS at issue time": round(cams_val, 1),
         })
 
     return curr_pm, row_id, n_sensors, qc_flag, rows

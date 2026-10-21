@@ -8,9 +8,11 @@ if str(ROOT_DIR) not in sys.path:
 
 from datetime import datetime, timezone
 import json
+import re
 import duckdb
 import pandas as pd
 import streamlit as st
+import altair as alt
 
 from src.rag.guard import InsightAgent
 from src.model.lgbm import generate_forecast_for_city
@@ -29,6 +31,7 @@ EVAL_SUMMARY_FILE = STATE_DIR / "eval_summary.csv" if (STATE_DIR / "eval_summary
 EVAL_GROUP_FILE = STATE_DIR / "eval_by_group.csv" if (STATE_DIR / "eval_by_group.csv").exists() else Path("data/gold/eval_by_group.parquet")
 QUALITY_LOG_FILE = STATE_DIR / "quality_log.csv" if (STATE_DIR / "quality_log.csv").exists() else Path("data/gold/quality_log.parquet")
 HISTORY_FILE = STATE_DIR / "recent_history.csv"
+PREFECT_RUNS_FILE = STATE_DIR / "prefect_runs.csv" if (STATE_DIR / "prefect_runs.csv").exists() else Path("prefect_runs.csv")
 
 @st.cache_resource
 def get_rag_agent():
@@ -56,6 +59,8 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # -------------------------------------------------------------------
 with tab1:
     st.subheader("Data Pipeline Freshness & Run Health")
+    now_utc = datetime.now(timezone.utc)
+
     if STATUS_FILE.exists():
         with open(STATUS_FILE, "r", encoding="utf-8") as f:
             status_data = json.load(f)
@@ -70,14 +75,83 @@ with tab1:
     else:
         st.warning("status.json not found.")
 
-    st.write("#### Upstream Data Feeds & Licences")
+    # Upstream data feeds: age dynamically computed from real manifest timestamps
+    manifest_path = Path("data/manifest.csv")
+    openaq_status = "UNKNOWN"
+    meteo_status = "UNKNOWN"
+    firms_status = "UNKNOWN"
+
+    if manifest_path.exists():
+        try:
+            df_m = pd.read_csv(manifest_path)
+            df_m["fetch_time"] = pd.to_datetime(df_m["fetch_time_utc"], utc=True)
+
+            m_openaq = df_m[df_m["source"].str.contains("OpenAQ", na=False)]
+            if not m_openaq.empty:
+                max_t = m_openaq["fetch_time"].max()
+                age = (now_utc - max_t).total_seconds() / 3600.0
+                tag = "LATE" if age > 3.0 else "FRESH"
+                openaq_status = f"{tag} ({age:.1f}h ago)"
+
+            m_meteo = df_m[df_m["source"].str.contains("Open-Meteo", na=False)]
+            if not m_meteo.empty:
+                max_t = m_meteo["fetch_time"].max()
+                age = (now_utc - max_t).total_seconds() / 3600.0
+                tag = "LATE" if age > 6.0 else "FRESH"
+                meteo_status = f"{tag} ({age:.1f}h ago)"
+
+            m_firms = df_m[df_m["source"].str.contains("FIRMS", na=False)]
+            if not m_firms.empty:
+                max_t = m_firms["fetch_time"].max()
+                age = (now_utc - max_t).total_seconds() / 3600.0
+                tag = "LATE" if age > 12.0 else "FRESH"
+                firms_status = f"{tag} ({age:.1f}h ago)"
+        except Exception:
+            pass
+
+    st.write("#### Upstream Ingestion Feeds & Freshness (Audit Logged)")
     sources_df = pd.DataFrame([
-        {"Source": "OpenAQ (Community PM2.5)", "Status": "FRESH (<1h)", "Licence": "CC BY 4.0 / Community", "Update Rate": "Hourly"},
-        {"Source": "Open-Meteo (CAMS & ERA5)", "Status": "FRESH (<1h)", "Licence": "CC BY 4.0 (Non-commercial)", "Update Rate": "Hourly"},
-        {"Source": "NASA FIRMS (VIIRS/MODIS)", "Status": "FRESH (Daily)", "Licence": "NASA Public Domain", "Update Rate": "Daily"},
-        {"Source": "AirNow Embassy Archive", "Status": "HISTORICAL CALIBRATION", "Licence": "US Public Domain", "Update Rate": "Pre-March 2025 Archive"},
+        {"Source": "OpenAQ Community Sensors", "Computed Age & Status": openaq_status, "Freshness Policy": "LATE > 3h", "Licence": "CC BY 4.0 / Open Data"},
+        {"Source": "ECMWF CAMS & ERA5 (Open-Meteo)", "Computed Age & Status": meteo_status, "Freshness Policy": "LATE > 6h", "Licence": "CC BY 4.0 Non-commercial"},
+        {"Source": "NASA FIRMS (South Asia VIIRS)", "Computed Age & Status": firms_status, "Freshness Policy": "LATE > 12h", "Licence": "NASA Public Domain"},
+        {"Source": "AirNow Diplomatic Reference", "Computed Age & Status": "HISTORICAL ARCHIVE", "Freshness Policy": "Calibration Only", "Licence": "US Public Domain"},
     ])
     st.dataframe(sources_df, use_container_width=True)
+
+    # City Ground-Truth Sensor Age from state/recent_history.csv
+    if HISTORY_FILE.exists():
+        st.write("#### Last Observation per Monitored City (from Ground-Truth Audit)")
+        try:
+            df_hist = pd.read_csv(HISTORY_FILE)
+            city_rows = []
+            for city_name, group in df_hist.groupby("city"):
+                max_ts_str = group["ts_utc"].max()
+                max_ts = pd.to_datetime(max_ts_str, utc=True)
+                age_h = (now_utc - max_ts).total_seconds() / 3600.0
+                state_tag = "LATE" if age_h > 3.0 else "FRESH"
+                sorted_g = group.sort_values("ts_utc")
+                city_rows.append({
+                    "City": city_name.title(),
+                    "Last Ground Truth Timestamp (UTC)": max_ts.strftime("%Y-%m-%d %H:%M:%SZ"),
+                    "Age (Hours)": round(age_h, 1),
+                    "Status": f"{state_tag} ({round(age_h, 1)}h)",
+                    "Last Audited PM2.5 (µg/m³)": round(sorted_g["pm25_cal"].iloc[-1], 1),
+                    "Sensor Flag": sorted_g["qc_flag"].iloc[-1],
+                })
+            st.dataframe(pd.DataFrame(city_rows), use_container_width=True)
+        except Exception as e:
+            st.caption(f"Note: Could not parse history timestamps: {e}")
+
+    # Prefect Run History (last successful and last 10 runs with states)
+    if PREFECT_RUNS_FILE.exists():
+        st.write("#### Orchestrated Flow Run History (Prefect Engine Audit)")
+        df_runs = pd.read_csv(PREFECT_RUNS_FILE)
+        if not df_runs.empty:
+            completed_runs = df_runs[df_runs["state"] == "Completed"]
+            last_success_ts = completed_runs.iloc[0]["start_time"] if not completed_runs.empty else "None"
+            st.caption(f"**Last Successful Flow Run:** `{last_success_ts}` | Showing last {min(10, len(df_runs))} executions (including any failures).")
+            display_cols = [c for c in ["name", "state", "start_time", "end_time", "total_run_time"] if c in df_runs.columns]
+            st.dataframe(df_runs.head(10)[display_cols], use_container_width=True)
 
 # -------------------------------------------------------------------
 # Tab 2: Forecast & Advisory
@@ -92,6 +166,12 @@ with tab2:
 
     city_key = city_choice.lower().strip()
 
+    # City-specific model / data disclosures
+    if city_key == "peshawar":
+        st.info("ℹ️ **Model Note (Unseen City Transfer):** The LightGBM model had **no Peshawar training data** (sensor history began May 2025 in the test split). The model forecasts using regional atmospheric features and **1 active community sensor**.")
+    elif city_key == "islamabad":
+        st.info("ℹ️ **Data Note (Label-Source Transition):** Training labels for Islamabad were drawn from the AirNow Community series (`s_1343270`), whereas live test labels transition to the F-7 AirGradient community sensor.")
+
     # Load from committed state/ first
     city_payload = None
     if FORECASTS_FILE.exists():
@@ -99,14 +179,24 @@ with tab2:
             all_forecasts = json.load(f)
         city_payload = all_forecasts.get(city_key)
 
+    # 1. Unvalidated Cities
     if city_key in ["faisalabad", "multan"]:
-        notice = city_payload.get("notice") if city_payload else f"{city_choice} is an UNVALIDATED district without continuous reference monitors on OpenAQ."
-        st.warning(f"⚠️ **Notice: {notice}**")
-        st.error("District Advisory: SUSPENDED (Unvalidated Ground Truth)")
-        st.info(
-            "Per Hackathon Guidelines (Section 1), forecasts and automated health advisories are strictly withheld "
-            "for unvalidated cities until physical reference or calibrated community monitors are installed."
-        )
+        st.warning(f"⚠️ **Notice: {city_choice} is an unvalidated district without ground-truth sensors.**")
+        st.error("District Advisory: WITHHELD (Unvalidated Ground Truth)")
+        st.info("Saaf Hawa withholds forecasts for cities without ground-truth sensors.")
+
+    # 2. Stale Monitored Cities (Lahore & Karachi)
+    elif city_payload and city_payload.get("stale"):
+        last_obs = city_payload.get("last_observation_utc") or "Unknown"
+        qc_flag = city_payload.get("qc_flag") or "STALE_FEED"
+        notice = city_payload.get("notice") or "Observation feed is stale (>3 hours). Forecast is withheld per Data Quality Gate 2 freshness rule."
+
+        st.warning(f"⚠️ **Forecast Withheld for {city_choice}**")
+        st.error("District Advisory: WITHHELD (Stale Observation Feed)")
+        st.markdown(f"**Last Observation Recorded:** `{last_obs}` ({qc_flag})")
+        st.markdown(f"**Why the forecast is withheld:** {notice}")
+
+    # 3. Monitored Cities with Live Feed
     else:
         curr_pm, row_id, n_sensors, qc_flag, forecast_rows = None, None, None, None, None
         if city_payload and city_payload.get("monitored"):
@@ -119,13 +209,29 @@ with tab2:
             curr_pm, row_id, n_sensors, qc_flag, forecast_rows = generate_forecast_for_city(city_key, DB_PATH)
 
         if curr_pm is not None and forecast_rows:
-            advisory_active = curr_pm >= 55.5
-            if advisory_active:
-                st.error("🚨 **DISTRICT ADVISORY APPROVED: LIMIT OUTDOOR ACTIVITIES**")
-                st.markdown("**Intervention:** Enforce N95 respirators, suspend outdoor school morning assemblies, shift physical education indoors.")
+            # Advisory Rule based on Forecast p50 and p90
+            p50_vals = []
+            p90_vals = []
+            for r in forecast_rows:
+                v50 = r.get("p50 Forecast (ug/m3)")
+                if v50 is not None:
+                    p50_vals.append(float(v50))
+                band_str = str(r.get("80% Conformal Band [p10, p90]", ""))
+                matches = re.findall(r"[-+]?\d*\.\d+|\d+", band_str)
+                if len(matches) >= 2:
+                    p90_vals.append(float(matches[1]))
+
+            if any(v >= 55.5 for v in p50_vals):
+                st.error("🚨 **DRAFT ADVISORY: LIMIT OUTDOOR ACTIVITY (Forecast Exceedance)**")
+                st.markdown("**Intervention:** Enforce N95 respirators, suspend outdoor morning assemblies, shift physical education indoors.")
+            elif any(v >= 55.5 for v in p90_vals):
+                st.warning("⚠️ **DRAFT ADVISORY: POSSIBLE EXCEEDANCE (Uncertainty Band Exceeds Threshold)**")
+                st.markdown("**Intervention:** Heightened monitoring; vulnerable populations and schools prepare indoor contingency plans.")
             else:
-                st.success("✅ **DISTRICT ADVISORY DRAFT: STANDARD CONDITIONS**")
+                st.success("✅ **DRAFT ADVISORY: STANDARD CONDITIONS (No Forecast Exceedance)**")
                 st.markdown("**Intervention:** Outdoor activities permitted under standard monitoring.")
+
+            st.caption("Advisory Rule: DRAFT 'limit outdoor activity' triggers if LightGBM p50 at any horizon (+6h, +12h, +24h) ≥ 55.5 µg/m³; DRAFT 'possible exceedance' triggers if the 80% conformal upper bound (p90) ≥ 55.5 µg/m³.")
 
             m1, m2, m3 = st.columns(3)
             m1.metric("Latest Calibrated Ground Truth", f"{round(curr_pm, 1)} µg/m³")
@@ -133,7 +239,10 @@ with tab2:
             m3.metric("Audited Row ID", row_id)
 
             st.write("#### 24-Hour LightGBM Quantile Forecast vs Declared Baselines")
-            st.dataframe(pd.DataFrame(forecast_rows), use_container_width=True)
+            df_fc_display = pd.DataFrame(forecast_rows)
+            if "CAMS Hindcast" in df_fc_display.columns:
+                df_fc_display = df_fc_display.rename(columns={"CAMS Hindcast": "CAMS at issue time"})
+            st.dataframe(df_fc_display, use_container_width=True)
 
             # 48-Hour Historical Trend
             if HISTORY_FILE.exists():
@@ -147,15 +256,58 @@ with tab2:
         else:
             st.info(f"No ground truth data available for {city_choice}.")
 
-        # Historical Episode Replay for Lahore
-        replay_file = Path("state/replay.csv")
-        if city_key == "lahore" and replay_file.exists():
-            st.markdown("---")
-            with st.expander("🎬 **Historical Smog Episode Replay: Lahore November 2025 (Held-out Test Period)**", expanded=True):
-                st.info("ℹ️ **Historical Replay Mode:** Live Lahore sensors are currently stale on OpenAQ (last report Oct 14). Below is the verified test set replay during the severe November 2025 smog episode, demonstrating actual PM2.5 ground truth vs. LightGBM +6h forecast and calibrated 80% CQR uncertainty bands.")
-                df_rep = pd.read_csv(replay_file)
-                st.dataframe(df_rep.head(30), use_container_width=True)
-                st.line_chart(df_rep.set_index("ts_pkt")[["actual_pm25", "forecast_p50_h6", "band_p10_h6", "band_p90_h6"]])
+    # Historical Episode Replay for Lahore
+    replay_file = Path("state/replay.csv")
+    if city_key == "lahore" and replay_file.exists():
+        st.markdown("---")
+        with st.expander("🎬 **Historical Smog Episode Replay: Lahore November 2025 (Held-out Test Period)**", expanded=True):
+            st.info("ℹ️ **Held-out Test Replay:** Live Lahore sensors are currently stale on OpenAQ (last report Oct 14). Below is the held-out test replay during the acute November 2025 smog episode (actual peak reached **458 µg/m³**). Plots the +6h forecast and 80% conformal band aligned at target time ($t_{target} = t_{utc} + 6\\text{h}$) against actual PM2.5 at that same time.")
+            df_rep = pd.read_csv(replay_file)
+
+            y_true = df_rep["actual_target_pm25"]
+            y_pred = df_rep["forecast_p50_h6"]
+            y_persist = df_rep["pred_persist"]
+            rep_mae = (y_true - y_pred).abs().mean()
+            rep_pmae = (y_true - y_persist).abs().mean()
+            rep_cov = ((y_true >= df_rep["band_p10_h6"]) & (y_true <= df_rep["band_p90_h6"])).mean() * 100.0
+
+            r1, r2, r3, r4 = st.columns(4)
+            r1.metric("Aligned Replay Samples", f"{len(df_rep)} hours")
+            r2.metric("LightGBM +6h MAE", f"{rep_mae:.2f} µg/m³")
+            r3.metric("Persistence +6h MAE", f"{rep_pmae:.2f} µg/m³", delta=f"{rep_pmae - rep_mae:.2f} better", delta_color="normal")
+            r4.metric("80% Interval Coverage", f"{rep_cov:.1f}%", help="Nominal target 80%; drops to ~72% during acute peak")
+
+            # Altair Chart with readable datetime ticks
+            df_rep["target_datetime"] = pd.to_datetime(df_rep["ts_target_pkt"])
+
+            band = alt.Chart(df_rep).mark_area(opacity=0.25, color="#3182bd").encode(
+                x=alt.X("target_datetime:T", title="Target Time (PKT)", axis=alt.Axis(format="%b %d %H:%M", labelAngle=-45)),
+                y=alt.Y("band_p10_h6:Q", title="PM2.5 (µg/m³)"),
+                y2="band_p90_h6:Q"
+            )
+            line_actual = alt.Chart(df_rep).mark_line(color="#e41a1c", strokeWidth=2).encode(
+                x="target_datetime:T",
+                y="actual_target_pm25:Q",
+                tooltip=[
+                    alt.Tooltip("target_datetime:T", title="Target Time (PKT)", format="%Y-%m-%d %H:%M"),
+                    alt.Tooltip("actual_target_pm25:Q", title="Actual PM2.5 (µg/m³)"),
+                    alt.Tooltip("forecast_p50_h6:Q", title="LightGBM +6h (µg/m³)"),
+                    alt.Tooltip("pred_persist:Q", title="Persistence (µg/m³)"),
+                    alt.Tooltip("band_p10_h6:Q", title="Band p10"),
+                    alt.Tooltip("band_p90_h6:Q", title="Band p90"),
+                ]
+            )
+            line_pred = alt.Chart(df_rep).mark_line(color="#1b365d", strokeWidth=2, strokeDash=[4, 4]).encode(
+                x="target_datetime:T",
+                y="forecast_p50_h6:Q"
+            )
+            chart = (band + line_actual + line_pred).properties(
+                height=380,
+            )
+            st.altair_chart(chart, use_container_width=True)
+
+            with st.expander("📋 View Raw Aligned Replay Data (Target Aligned)", expanded=False):
+                st.dataframe(df_rep, use_container_width=True)
 
 # -------------------------------------------------------------------
 # Tab 3: Scientific Evidence
@@ -171,7 +323,18 @@ with tab3:
             df_summary = pd.read_parquet(EVAL_SUMMARY_FILE)
 
         st.write("#### Benchmark: LightGBM + CQR vs Baselines (Like-for-Like Test Split)")
-        st.dataframe(df_summary, use_container_width=True)
+
+        # Format baseline coverage and band width as blank (not 0)
+        display_summary = df_summary.copy()
+        mask_base = display_summary["model"].str.contains("Baseline", na=False)
+        if "coverage_80" in display_summary.columns:
+            display_summary["coverage_80"] = display_summary["coverage_80"].astype(str)
+            display_summary.loc[mask_base, "coverage_80"] = ""
+        if "mean_band_width" in display_summary.columns:
+            display_summary["mean_band_width"] = display_summary["mean_band_width"].astype(str)
+            display_summary.loc[mask_base, "mean_band_width"] = ""
+
+        st.dataframe(display_summary, use_container_width=True)
 
         model_rows = df_summary[df_summary["model"].str.contains("LightGBM")]
         cov_min = float(model_rows["coverage_80"].min()) if not model_rows.empty else 0.0
