@@ -25,7 +25,8 @@ Following the March 2025 shutdown of U.S. Diplomatic Post AirNow monitors in Pak
 - **Streamlit Application:** [https://clean-air.streamlit.app](https://clean-air.streamlit.app)  
   *(Alternative link: [Streamlit Share](https://share.streamlit.io/kazmi4700937-hub/clean-air/main/streamlit_app.py))*
 - **Demo Video (≤3 min, no login required):** VIDEO_LINK_TODO
-- **Prefect Dashboard Screenshot:** [docs/prefect_screenshot.png](docs/prefect_screenshot.png) *(add before submission)*
+- **Prefect Dashboard Screenshot:** [docs/prefect_screenshot.jpg](docs/prefect_screenshot.jpg) · [detail (all 22 runs)](docs/prefect_screenshot_detail.jpg)
+- **Live Dashboard Screenshots:** [top panel](docs/streamlit_dashboard_top.jpg) · [bottom panel](docs/streamlit_dashboard_bottom.jpg)
 
 ---
 
