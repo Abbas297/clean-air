@@ -21,8 +21,11 @@ Independent publishers: OpenAQ community sensors, U.S. AirNow embassy archive (n
 • Uncalibrated labels (no reference-monitor overlap in the training window): karachi, peshawar.
 • Labels in the test period come from different sensors than in training (sensor change in May 2025), so test error includes a label-source shift.
 • Weakest group: Smog (Oct-Feb) at +24h (MAE 37.87, 80% coverage 79.4%).
-• Subgroups trailing baselines: Night (00-06 PKT) +6h; Afternoon (12-18 PKT) +12h; Very Unhealthy (>150) +24h (e.g. Night +6h trails persistence 25.49 vs 25.20; Afternoon +12h trails seasonal 25.18 vs 24.90).
+• Subgroups trailing baselines: Night (00-06 PKT) +6h; Afternoon (12-18 PKT) +12h; Very Unhealthy (>150) +24h (Night +6h trails persistence 25.49 vs 25.20; Afternoon +12h trails seasonal 25.18 vs 24.90).
 • Coverage drops in critical slices: Lahore achieves 74.7-76.0% (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% (MAE 53.83).
+• Peshawar transfer: Peshawar has 0 training hours and represents 45.5% of test rows (10,710 of 23,547); the result is largely an out-of-distribution transfer to an unseen city.
+• Partial circularity: Islamabad calibration uses series s_1343270 which matches the embassy monitor in ~75% of overlap hours; treat its calibration R² as not independent evidence.
+• Run history timing: The hourly pipeline history starts at 02:35 AM PKT due to late scheduler activation; 42 missing fire dates across 2023–2026 are treated as 0 fires.
 
 ## 5. Responsible AI
 The Insight Agent takes numbers only from SQL on Gold tables, stores row IDs with each answer, answers "I don't know" when retrieval or data is missing, points to Rescue 1122 / Health helpline 1033 for emergencies, and labels unvalidated cities. Outputs are information, not professional advice.

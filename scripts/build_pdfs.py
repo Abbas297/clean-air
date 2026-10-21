@@ -46,8 +46,11 @@ def _summary_paragraphs(f):
     lim.append(f"Weakest group: {weak[0]} at {weak[1]} (MAE {weak[2]:.2f}, 80% coverage {weak[3]:.1f}%).")
     if len(f["worse"]):
         names = "; ".join(f"{r.group_value} {r.horizon}" for r in f["worse"].itertuples())
-        lim.append(f"Subgroups trailing baselines: {names} (e.g. Night +6h trails persistence 25.49 vs 25.20; Afternoon +12h trails seasonal 25.18 vs 24.90).")
+        lim.append(f"Subgroups trailing baselines: {names} (Night +6h trails persistence 25.49 vs 25.20; Afternoon +12h trails seasonal 25.18 vs 24.90).")
     lim.append("Coverage drops in critical slices: Lahore achieves 74.7-76.0% (target 80%); Very Unhealthy tier (>150 µg/m³) coverage drops to 72.2% (MAE 53.83).")
+    lim.append("Peshawar transfer: Peshawar has 0 training hours and represents 45.5% of test rows (10,710 of 23,547); the result is largely an out-of-distribution transfer to an unseen city.")
+    lim.append("Partial circularity: Islamabad calibration uses series s_1343270 which matches the embassy monitor in ~75% of overlap hours; treat its calibration R² as not independent evidence.")
+    lim.append("Run history timing: The hourly pipeline history starts at 02:35 AM PKT due to late scheduler activation; 42 missing fire dates across 2023–2026 are treated as 0 fires.")
     return {
         "s1": ("1. Problem & Approach",
                "Public reference-grade air quality data in Pakistani cities became unavailable after the U.S. embassy network stopped publishing to AirNow in 2025. "
@@ -70,11 +73,11 @@ def generate_summary_pdf(output_path: Path = Path("Summary.pdf")):
     import re
     f = _facts()
     P = _summary_paragraphs(f)
-    doc = SimpleDocTemplate(str(output_path), pagesize=letter, rightMargin=36, leftMargin=36, topMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(str(output_path), pagesize=letter, rightMargin=32, leftMargin=32, topMargin=24, bottomMargin=24)
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle("TitleStyle", parent=styles["Heading1"], fontSize=16, leading=19, textColor=colors.HexColor("#1b365d"))
-    heading_style = ParagraphStyle("H2Style", parent=styles["Heading2"], fontSize=11, leading=14, textColor=colors.HexColor("#2b547e"), spaceBefore=4, spaceAfter=2)
-    body_style = ParagraphStyle("BodyStyle", parent=styles["Normal"], fontSize=8.6, leading=11)
+    title_style = ParagraphStyle("TitleStyle", parent=styles["Heading1"], fontSize=15, leading=18, textColor=colors.HexColor("#1b365d"))
+    heading_style = ParagraphStyle("H2Style", parent=styles["Heading2"], fontSize=10.5, leading=13, textColor=colors.HexColor("#2b547e"), spaceBefore=3, spaceAfter=2)
+    body_style = ParagraphStyle("BodyStyle", parent=styles["Normal"], fontSize=8.0, leading=10.2)
 
     el = [Paragraph("Saaf Hawa: 24-hour smog forecasting for Punjab after the loss of embassy monitors", title_style),
           Paragraph("<b>Track:</b> Air quality | <b>Event:</b> HackInsight '26 | free and open-source stack", body_style)]

@@ -6,6 +6,7 @@ import pandas as pd
 import requests
 
 from src.ingest.manifest import write_manifest_row
+from src.ingest.retry_session import get_retry_session
 
 FIRMS_API_BASE = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 FIRMS_OPEN_SOUTH_ASIA_7D = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_South_Asia_7d.csv"
@@ -38,12 +39,13 @@ def fetch_latest_fires(
     source = "VIIRS_SNPP_SP"
 
     records: List[Dict[str, Any]] = []
+    session = get_retry_session(retries=3, backoff_factor=1.0)
 
     # Priority 1: Direct API with Key if provided
     if map_key and map_key != "DEMO_KEY":
         try:
             url = f"{FIRMS_API_BASE}/{map_key}/{source}/{area_coords}/{day_range}"
-            resp = requests.get(url, timeout=20)
+            resp = session.get(url, timeout=20)
             if resp.status_code == 200 and "latitude" in resp.text:
                 import io
                 df_raw = pd.read_csv(io.StringIO(resp.text))
@@ -67,7 +69,7 @@ def fetch_latest_fires(
     if not records:
         try:
             print("[FIRMS] Querying NASA open NRT 7-day South Asia fire detection feed...")
-            resp = requests.get(FIRMS_OPEN_SOUTH_ASIA_7D, timeout=30)
+            resp = session.get(FIRMS_OPEN_SOUTH_ASIA_7D, timeout=30)
             if resp.status_code == 200 and "latitude" in resp.text:
                 import io
                 df_all = pd.read_csv(io.StringIO(resp.text))

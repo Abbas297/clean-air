@@ -36,17 +36,17 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
     with open(p, "r", encoding="utf-8") as f:
         return json.load(f)
 
-@task(name="task-ingest-openaq")
+@task(name="task-ingest-openaq", retries=3, retry_delay_seconds=10)
 def task_ingest_openaq(config: Dict[str, Any]) -> str:
     path = fetch_openaq(config)
     return str(path)
 
-@task(name="task-ingest-openmeteo")
+@task(name="task-ingest-openmeteo", retries=3, retry_delay_seconds=10)
 def task_ingest_openmeteo(config: Dict[str, Any]) -> str:
     path = fetch_openmeteo(config)
     return str(path)
 
-@task(name="task-ingest-firms")
+@task(name="task-ingest-firms", retries=3, retry_delay_seconds=10)
 def task_ingest_firms(config: Dict[str, Any]) -> str:
     path = fetch_latest_fires(config)
     return str(path)

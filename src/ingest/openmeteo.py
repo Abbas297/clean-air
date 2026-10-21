@@ -6,6 +6,7 @@ import pandas as pd
 import requests
 
 from src.ingest.manifest import write_manifest_row
+from src.ingest.retry_session import get_retry_session
 
 OPENMETEO_AQ_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 OPENMETEO_WEATHER_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
@@ -29,6 +30,7 @@ def fetch_latest(
 
     cities = config.get("cities", {})
     all_city_records: List[Dict[str, Any]] = []
+    session = get_retry_session(retries=3, backoff_factor=1.0)
 
     for city_key, city_data in cities.items():
         lat = city_data["latitude"]
@@ -44,7 +46,7 @@ def fetch_latest(
             "forecast_days": 2,
             "timezone": "UTC",
         }
-        aq_resp = requests.get(OPENMETEO_AQ_URL, params=aq_params, timeout=15)
+        aq_resp = session.get(OPENMETEO_AQ_URL, params=aq_params, timeout=20)
         aq_resp.raise_for_status()
         aq_json = aq_resp.json()
 
@@ -57,7 +59,7 @@ def fetch_latest(
             "forecast_days": 2,
             "timezone": "UTC",
         }
-        wx_resp = requests.get(OPENMETEO_WEATHER_FORECAST_URL, params=wx_params, timeout=15)
+        wx_resp = session.get(OPENMETEO_WEATHER_FORECAST_URL, params=wx_params, timeout=20)
         wx_resp.raise_for_status()
         wx_json = wx_resp.json()
 
@@ -122,6 +124,7 @@ def fetch_historical_archive(
     all_city_records: List[Dict[str, Any]] = []
 
     print(f"[Open-Meteo Archive] Ingesting real historical weather & CAMS reanalysis ({start_date} to {end_date})...", flush=True)
+    session = get_retry_session(retries=3, backoff_factor=1.5)
 
     for city_key, city_data in cities.items():
         lat = city_data["latitude"]
@@ -138,7 +141,7 @@ def fetch_historical_archive(
                 "hourly": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m",
                 "timezone": "UTC",
             }
-            wx_resp = requests.get(OPENMETEO_WEATHER_ARCHIVE_URL, params=wx_params, timeout=35)
+            wx_resp = session.get(OPENMETEO_WEATHER_ARCHIVE_URL, params=wx_params, timeout=45)
             wx_resp.raise_for_status()
             wx_data = wx_resp.json().get("hourly", {})
 
@@ -151,7 +154,7 @@ def fetch_historical_archive(
                 "hourly": "pm2_5,pm10,aerosol_optical_depth",
                 "timezone": "UTC",
             }
-            aq_resp = requests.get(OPENMETEO_AQ_URL, params=aq_params, timeout=35)
+            aq_resp = session.get(OPENMETEO_AQ_URL, params=aq_params, timeout=45)
             aq_resp.raise_for_status()
             aq_data = aq_resp.json().get("hourly", {})
 

@@ -95,11 +95,19 @@ def get_evidence_data():
         return pd.DataFrame(), "Evaluation data not yet generated."
 
     df_eval = pd.read_csv(EVAL_SUMMARY_FILE)
+    lgb_rows = df_eval[df_eval["model"].str.contains("LightGBM", na=False)]
+    if not lgb_rows.empty:
+        cov_min = lgb_rows["coverage_80"].min()
+        cov_max = lgb_rows["coverage_80"].max()
+        cov_text = f"**{cov_min:.1f}% - {cov_max:.1f}%**"
+    else:
+        cov_text = "N/A"
+
     evidence_text = (
         "### Declared Success Criteria Verification (Real Held-Out Test Evaluation):\n"
         "1. **Baselines Beaten:** LightGBM Quantile Forecaster strictly outperforms Baseline A (Persistence) and Baseline B (Seasonal-Hour) across +6h, +12h, and +24h on like-for-like joined test data.\n"
-        "2. **Conformal Coverage:** Empirical 80% coverage rate is **82.8% - 84.9%**, conforming strictly within the declared 75% - 85% range.\n"
-        "3. **Embargo Integrity:** Zero label leakage verified by automated test enforcing a strict 24-hour embargo between train, validation, and test splits."
+        f"2. **Conformal Coverage:** Empirical 80% coverage rate is {cov_text}, conforming within the declared 75% - 85% pooled range.\n"
+        "3. **Embargo Integrity:** Checked by automated test asserting a strict 24-hour embargo between train, validation, and test splits."
     )
     return df_eval, evidence_text
 

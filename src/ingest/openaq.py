@@ -7,6 +7,7 @@ import pandas as pd
 import requests
 
 from src.ingest.manifest import write_manifest_row
+from src.ingest.retry_session import get_retry_session
 
 OPENAQ_V3_BASE = "https://api.openaq.org/v3"
 
@@ -102,6 +103,7 @@ def fetch_latest(
     if api_key:
         headers["X-API-Key"] = api_key
 
+    session = get_retry_session(retries=3, backoff_factor=1.0)
     records: List[Dict[str, Any]] = []
     licences_observed: List[str] = []
 
@@ -115,7 +117,7 @@ def fetch_latest(
 
         try:
             url = f"{OPENAQ_V3_BASE}/sensors/{s_id}"
-            resp = requests.get(url, headers=headers, timeout=20)
+            resp = session.get(url, headers=headers, timeout=20)
             if resp.status_code == 200:
                 data = resp.json().get("results", [])
                 if data:
@@ -191,6 +193,7 @@ def fetch_historical_community_sensors(
 
     records: List[Dict[str, Any]] = []
 
+    session = get_retry_session(retries=3, backoff_factor=1.0)
     print("[OpenAQ Community Historical] Ingesting real community sensor readings from OpenAQ v3...", flush=True)
 
     for sensor_meta in COMMUNITY_SENSORS:
@@ -210,7 +213,7 @@ def fetch_historical_community_sensors(
                 "page": page,
             }
             try:
-                resp = requests.get(url, headers=headers, params=params, timeout=25)
+                resp = session.get(url, headers=headers, params=params, timeout=25)
                 if resp.status_code != 200:
                     print(f"[OpenAQ Community] Warning: {sensor_meta['location_name']} page {page} status {resp.status_code}", flush=True)
                     break
