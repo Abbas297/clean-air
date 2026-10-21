@@ -103,7 +103,7 @@ Evaluated on 23,547 held-out test rows under a strict 24-hour temporal embargo (
 ## ⚠️ Transparent Limitations & Disclosures
 
 From [Summary.md](Summary.md):
-- **Fire signal:** The FIRMS series in Silver covers 1,347 days (Jan 2023 – Oct 2026), backfilling multi-year transboundary fire counts and FRP lags. Exactly 42 dates across 2023–2026 are missing in upstream records (cause not established; treated as zero fires).
+- **Fire signal:** The FIRMS series in Silver covers 1,347 days (Jan 2023 – Oct 2026). Exactly 42 dates across 2023–2026 are missing in upstream records (cause not established; treated as zero fires). Offline ablation found no predictive gain from fire features (zeroing fire features gave equal or slightly lower MAE across both the full test set and the smog season); the fire features are kept in the pipeline as declared with negative results disclosed in [docs/ablation_fire.md](docs/ablation_fire.md).
 - **Uncalibrated labels:** Karachi and Peshawar had fewer than 30 reference-monitor overlap hours in the training window. Raw sensor values are used as published (identity) and clearly marked uncalibrated.
 - **Label source shift:** Test period labels come from different sensors than training (e.g. Islamabad training on `s_1343270` and testing on F-7 AirGradient; Lahore adding Barki AirGradient in May 2025). Test error reflects this real-world sensor transition.
 - **Weakest overall group:** Smog season (Oct–Feb) at +24h (MAE 37.87 µg/m³, 80% coverage 79.4%).

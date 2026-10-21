@@ -70,7 +70,7 @@ def _summary_paragraphs(f):
     weak = f["weak"]
     lim = []
     if f["fire_days"] >= 365:
-        lim.append(f"Fire signal: the FIRMS series in Silver covers {f['fire_days']} days (Jan 2023 - Oct 2026), backfilling multi-year transboundary fire counts and FRP lags.")
+        lim.append(f"Fire signal: FIRMS series in Silver covers {f['fire_days']} days (Jan 2023 - Oct 2026). Offline ablation found no predictive gain from fire features (MAE 21.90 vs 22.10 at +6h); kept as declared.")
     else:
         lim.append(f"Fire signal: the FIRMS series in Silver covers {f['fire_days']} day(s); where history is missing the lagged fire features are 0, so any fire effect is not yet evidenced.")
     if f["uncal_cities"]:
