@@ -20,10 +20,10 @@ Following the March 2025 shutdown of U.S. Diplomatic Post AirNow monitors in Pak
 
 ## 🌐 Live Deployments
 
-- **GitHub Repository:** [https://github.com/kazmi4700937-hub/clean-air](https://github.com/kazmi4700937-hub/clean-air)
+- **GitHub Repository:** [https://github.com/Abbas297/clean-air](https://github.com/kazmi4700937-hub/clean-air)
 - **Hugging Face Static Space (primary status dashboard):** [https://huggingface.co/spaces/abbaskazmi07/saaf-hawa](https://huggingface.co/spaces/abbaskazmi07/saaf-hawa)
 - **Streamlit Application:** [https://clean-air.streamlit.app](https://clean-air.streamlit.app)  
-  *(Alternative link: [Streamlit Share](https://share.streamlit.io/kazmi4700937-hub/clean-air/main/streamlit_app.py))*
+  *(Alternative link: [Streamlit Share](https://share.streamlit.io/Abbas297/clean-air/main/streamlit_app.py))*
 - **Demo Video (≤3 min, no login required):** VIDEO_LINK_TODO
 - **Prefect Dashboard Screenshot:** [docs/prefect_screenshot.jpg](docs/prefect_screenshot.jpg) · [detail (all 22 runs)](docs/prefect_screenshot_detail.jpg)
 - **Live Dashboard Screenshots:** [top panel](docs/streamlit_dashboard_top.jpg) · [bottom panel](docs/streamlit_dashboard_bottom.jpg)
